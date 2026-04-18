@@ -1,5 +1,5 @@
 # pk_gtfc /  Graphic Task Flow Control
-Component show chart gantt for Lazarus\CodeTyphone
+Component show chart gantt for Lazarus\CodeTyphon
 
 ## Version
 	
