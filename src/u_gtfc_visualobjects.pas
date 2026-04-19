@@ -4,7 +4,7 @@ unit u_gtfc_visualobjects;
 //
 //    Модуль компонента Graphic Task Flow Control
 //    Copyright (c) 2013  Pichugin M.
-//    ver. 0.36
+//    rev. 0.36
 //    Разработчик: Pichugin M. (e-mail: pichugin-swd@mail.ru)
 //
 //************************************************************

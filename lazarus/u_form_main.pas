@@ -1574,6 +1574,7 @@ begin
     Item1:=TGTFCOutsetTreeRowItem.Create;
     Item1.Text:='Отдел'+inttostr(i1);
     Item1.DBRecordID:='ID^'+Item1.Text;
+    Item1.DBTableName:='TCompanyMasterGroups';
     GTFControl.ActiveDocument.Rows.Add(Item1);
     for i2:=0 to Random(8) do
     begin
@@ -1581,6 +1582,7 @@ begin
       Item2.Parent:=Item1;
       Item2.Text:='Сотрудник '+inttostr(i2);
       Item2.DBRecordID:='ID^'+Item2.Text;
+      Item2.DBTableName:='TCompanyPeoples';
 
       GTFControl.ActiveDocument.Rows.Add(Item2);
       //for i3:=0 to Random(4) do
@@ -1589,30 +1591,36 @@ begin
         Item3.Parent:=Item2;
         Item3.Text:='Отпуск';
         Item3.DBRecordID:='ID^'+Item3.Text+inttostr(i1)+inttostr(i2);
+        Item3.DBTableName:='TCompanyRisk';
         GTFControl.ActiveDocument.Rows.Add(Item3);
 
         Item3:=TGTFCOutsetTreeRowItem.Create;
         Item3.Parent:=Item2;
         Item3.Text:='День рождения';
         Item3.DBRecordID:='ID^'+Item3.Text+inttostr(i1)+inttostr(i2);
+        Item3.DBTableName:='TCompanyRisk';
         GTFControl.ActiveDocument.Rows.Add(Item3);
 
         Item3:=TGTFCOutsetTreeRowItem.Create;
         Item3.Parent:=Item2;
         Item3.Text:='Отгул';
         Item3.DBRecordID:='ID^'+Item3.Text+inttostr(i1)+inttostr(i2);
+        Item3.DBTableName:='TCompanyRisk';
+        Item3.DBTableName:='TCompanyRisk';
         GTFControl.ActiveDocument.Rows.Add(Item3);
 
         Item3:=TGTFCOutsetTreeRowItem.Create;
         Item3.Parent:=Item2;
         Item3.Text:='В офисе';
         Item3.DBRecordID:='ID^'+Item3.Text+inttostr(i1)+inttostr(i2);
+        Item3.DBTableName:='TCompanyRisk';
         GTFControl.ActiveDocument.Rows.Add(Item3);
 
         Item3:=TGTFCOutsetTreeRowItem.Create;
         Item3.Parent:=Item2;
         Item3.Text:='Удаленная работа';
         Item3.DBRecordID:='ID^'+Item3.Text+inttostr(i1)+inttostr(i2);
+        Item3.DBTableName:='TCompanyRisk';
         Item3.RowEnabled:=False;
         GTFControl.ActiveDocument.Rows.Add(Item3);
 
@@ -1620,6 +1628,7 @@ begin
         Item3.Parent:=Item2;
         Item3.Text:='Командировка';
         Item3.DBRecordID:='ID^'+Item3.Text+inttostr(i1)+inttostr(i2);
+        Item3.DBTableName:='TCompanyRisk';
         GTFControl.ActiveDocument.Rows.Add(Item3);
       //end;
     end;
@@ -1736,7 +1745,8 @@ end;
 
 procedure TFgassicMain.cbWayLineChange(Sender: TObject);
 begin
-  GTFControl.ShowWayLine:=cbWayLine.Checked;
+  GTFControl.ShowWayLine      :=cbWayLine.Checked;
+  GTFControl.ShowTodayWayLine :=cbWayLine.Checked;
 end;
 
 procedure TFgassicMain.CheckBox1Change(Sender: TObject);

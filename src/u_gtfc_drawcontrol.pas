@@ -4,7 +4,7 @@ unit u_gtfc_drawcontrol;
 //
 //    Graphic Task Flow Control
 //    Copyright (c) 2023-2026  Pichugin M.
-//    ver. 0.55
+//    ver. 0.56
 //    Разработчик: Pichugin Maksim (e-mail: pichugin-swd@mail.ru)
 //
 //************************************************************
@@ -208,6 +208,7 @@ type
     FRuleStepB                       :Integer;
     FGrid                            :Boolean;
     FWayLine                         :Boolean;
+    FTodayWayLine                    :Boolean;
     FAntiLayering                    :Boolean;
     FShowGroupHorizontal             :Boolean;
     FGridColor                       :TColor;
@@ -309,6 +310,7 @@ type
     FLeftOutsetBorderRowNumWidth     : Integer;
     //Ширина групповой вертикальной надписи
     FLeftOutsetBorderVCapWidth        : Integer;
+    //Высота линейки с датами
     FTopOutsetBorderHeight           : Integer;
 
     FGraphDateTimeBegin              : TDateTime;
@@ -350,14 +352,15 @@ type
       var ScrollPos: Integer);
     procedure SetGridScale(AValue: Integer);
     procedure SetRowHeight(AValue: Integer);
+
+    procedure SuperPaint(Sender: TObject);
+    procedure MainControlPaint(Sender: TObject);
     procedure SLOutsetGridBGPaint(Sender: TObject);
     procedure SLOutsetGridPaint(Sender: TObject);
     procedure SLOutsetBorderHeaderPaint(Sender: TObject);
     procedure SLCursorPaint(Sender: TObject);
     procedure SLDevelopInfoPaint(Sender: TObject);
     procedure SLExtHintPaint(Sender: TObject);
-    procedure MainControlPaint(Sender: TObject);
-    procedure SuperPaint(Sender: TObject);
     procedure SLMessagesPaint(Sender: TObject);
     procedure SLFrameViewModePaint(Sender: TObject);
     procedure SLVirtualPaintBegin(Sender: TObject);
@@ -442,6 +445,7 @@ type
     property RuleStepB          :Integer read FRuleStepB write FRuleStepB;
     property ShowGrid           :Boolean read FGrid write FGrid;
     property ShowWayLine        :Boolean read FWayLine write FWayLine;
+    property ShowTodayWayLine   :Boolean read FTodayWayLine write FTodayWayLine;
     property AntiLayering       :Boolean read FAntiLayering write FAntiLayering;
     property ShowGroupHorizontal:Boolean read FShowGroupHorizontal write FShowGroupHorizontal;
     property GridColor          :TColor read FGridColor write FGridColor;
@@ -1052,6 +1056,7 @@ begin
   FAntiLayering                      :=False;
   FShowGroupHorizontal               :=False;
 
+  FTodayWayLine                      :=True;
   FWayLine                           :=False;
   FGrid                              :=True;
   FGridColor                         :=clActiveBorder;
@@ -3742,9 +3747,10 @@ end;
 
 procedure TGTFControl.RefreshFilterEntity;
 var
-  i          :integer;
+  i,j        :integer;
   Item       :TEntity;
   ItemTask   :TBasicGridEntity;
+  ItemLine   :TGraphicConnectionline;
   Doc        :TGTFDrawDocument;
   DrawObject :Boolean;
 begin
@@ -3778,6 +3784,9 @@ begin
                        end;
                    end;
                end;
+            end
+            else begin
+                DrawObject :=False;
             end;
 
             if (DrawObject)and Assigned(FOnEntityFilterEvent) then
@@ -3788,6 +3797,51 @@ begin
               Doc.ModelSpace.ObjectsFiltered.Add(Item);
             end;
     end;
+    //
+    for I := 0 to Doc.ModelSpace.Objects.Count - 1 do
+    begin
+            DrawObject :=False;
+            Item       :=Doc.ModelSpace.Objects.Items[i];
+
+            if Item is TGraphicConnectionline then
+            begin
+               ItemLine :=TGraphicConnectionline(Item);
+
+               for j:=0 to Doc.ModelSpace.ObjectsFiltered.Count-1 do
+               begin
+                   ItemTask :=TBasicGridEntity(Doc.ModelSpace.ObjectsFiltered.Items[j]);
+                   if ItemLine.BeginEntityID=ItemTask.ID then
+                   begin
+                      DrawObject :=True;
+                      break;
+                   end;
+               end;
+
+               if DrawObject then
+               begin
+                 DrawObject :=False;
+                 for j:=0 to Doc.ModelSpace.ObjectsFiltered.Count-1 do
+                 begin
+                     ItemTask :=TBasicGridEntity(Doc.ModelSpace.ObjectsFiltered.Items[j]);
+                     if ItemLine.EndEntityID=ItemTask.ID then
+                     begin
+                        DrawObject :=True;
+                        break;
+                     end;
+                 end;
+               end;
+
+            end;
+
+            if (DrawObject)and Assigned(FOnEntityFilterEvent) then
+               FOnEntityFilterEvent(Self,Item,DrawObject);
+
+            if DrawObject then
+            begin
+              Doc.ModelSpace.ObjectsFiltered.Add(Item);
+            end;
+    end;
+
   end;
 end;
 
@@ -3815,7 +3869,6 @@ var
   index      :integer;
   MVertItem,
   Item       :TEntity;
-  //ItemTask   :TGraphicTask;
   Doc        :TGTFDrawDocument;
   DrawObject :Boolean;
   DeltaVertex :TGTFPoint;
@@ -4624,15 +4677,15 @@ procedure TGTFControl.SLCursorPaint(Sender: TObject);
 var
   ColItem :TGTFCOutsetTreeColItem;
   RowItem :TGTFCOutsetTreeRowItem;
-  i,e,h,
+  i,e,
   PosY1,PosY2,
   PosY,
   PosX1,PosX2,
   PosX    :integer;
 begin
-   if (FWayLine) then
+   if (FTodayWayLine) then
    begin
-       //Столбцы
+       //Столбцы. Отрисовка подсветки текущего дня(today)
        e:=3;
        for i:=0 to ActiveDocument.Cols.Count-1 do
        begin
@@ -4656,7 +4709,7 @@ begin
                      FDrawLayerMainCanvas.Pen.Color   :=FCursorColor;
                      FDrawLayerMainCanvas.Pen.Mode    :=pmCopy;
 
-				             FDrawLayerMainCanvas.Pen.Width   :=2;
+		     FDrawLayerMainCanvas.Pen.Width   :=2;
                      FDrawLayerMainCanvas.Line(PosX,FTopOutsetBorderHeight,PosX,vbmHeight);
                      FDrawLayerMainCanvas.Pen.Width   :=3;
                      FDrawLayerMainCanvas.Ellipse(PosX-e,FTopOutsetBorderHeight-e,PosX+e,FTopOutsetBorderHeight+e);
@@ -4665,8 +4718,11 @@ begin
              end;
            end;
        end;
+   end;
 
-       //Строки
+   if (FWayLine) then
+   begin
+       //Рамка вокруг даты под курсором
        e:=2;
        FDrawLayerMainCanvas.Brush.Color :=ColorLighter(clHighLight,1);
        FDrawLayerMainCanvas.Pen.Color   :=FDrawLayerMainCanvas.Brush.Color;
@@ -4680,6 +4736,11 @@ begin
          PosX2:=ColItem.EndX+ActiveDocument.FViewPos.X;
          PosX    :=PosX1+(ColWidth) div 2;
 
+         if PosX1<FLeftOutsetBorderWidth then
+         begin
+           PosX1:=FLeftOutsetBorderWidth;
+         end;
+
          if PosX>FLeftOutsetBorderWidth then
          begin
               FDrawLayerMainCanvas.Ellipse(PosX-e,FTopOutsetBorderHeight-e,PosX+e,FTopOutsetBorderHeight+e);
@@ -4687,20 +4748,27 @@ begin
          end;
        end;
 
+       //Строки
        i:=ActiveDocument.GetRowUnderCursor;
        if (i>-1)and(i<ActiveDocument.Rows.Count) then
        begin
           RowItem :=TGTFCOutsetTreeRowItem(ActiveDocument.Rows.Items[i]);
-          h       :=RowItem.Height;
+          //h       :=RowItem.Height;
           PosY1   :=RowItem.BeginY+ActiveDocument.FViewPos.Y;
           PosY2   :=RowItem.EndY+ActiveDocument.FViewPos.Y;
 
-          PosY    :=RowItem.BeginY+(h) div 2;
+          if FTopOutsetBorderHeight>PosY1 then
+          begin
+             PosY1:=FTopOutsetBorderHeight;
+          end;
 
-          PosY    :=PosY+ActiveDocument.FViewPos.Y;
-          FDrawLayerMainCanvas.Ellipse(FLeftOutsetBorderWidth-e,PosY-e,FLeftOutsetBorderWidth+e,PosY+e);
+          PosY    :=PosY1+((PosY2-PosY1) div 2);
 
-          DrawHighLightFrame(FDrawLayerMainCanvas,FLeftOutsetBorderWidth,PosY1,vbpWidth,PosY2);
+          if FTopOutsetBorderHeight<PosY2 then
+          begin
+            FDrawLayerMainCanvas.Ellipse(FLeftOutsetBorderWidth-e,PosY-e,FLeftOutsetBorderWidth+e,PosY+e);
+            DrawHighLightFrame(FDrawLayerMainCanvas,FLeftOutsetBorderWidth,PosY1,vbpWidth,PosY2);
+          end;
        end;
    end;
 

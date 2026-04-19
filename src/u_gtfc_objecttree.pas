@@ -6,7 +6,7 @@ unit u_gtfc_objecttree;
 //
 //    Модуль компонента Graphic Task Flow Control
 //    Copyright (c) 2013  Pichugin M.
-//    ver. 14
+//    rev. 15
 //    Разработчик: Pichugin M. (e-mail: pichugin-swd@mail.ru)
 //
 //************************************************************
@@ -36,6 +36,7 @@ type
   TGTFCOutsetTreeBasicItem = class
   private
     FDBRecordID    : Variant;
+    FDBTableNameIndex : integer;
     FGridIndex     : Integer;
     FSeparator     : Boolean;
     FParentItem    : Boolean;
@@ -47,14 +48,17 @@ type
     FLevel         : Integer;
     FText          : ShortString;
     FDrawRectBody  : TRect;
+    function GetDBTableName: ShortString;
     function GetParent: TGTFCOutsetTreeBasicItem;
     procedure SetColor(AValue: integer);
+    procedure SetDBTableName(AValue: ShortString);
     procedure SetParent(AValue: TGTFCOutsetTreeBasicItem);
   public
     property GridIndex : integer read FGridIndex write FGridIndex;
     property Text : ShortString read FText write FText;
     property Data : Pointer read FData write FData;
     property DBRecordID : Variant read FDBRecordID write FDBRecordID;
+    property DBTableName: ShortString read GetDBTableName write SetDBTableName;
     property Tag : integer read FTag write FTag;
     property Level : integer read FLevel write FLevel;
     property ChildCount : integer read FChildCount write FChildCount;
@@ -182,6 +186,9 @@ type
   TGTFCOutsetColTree = class(TGTFCOutsetBasicTree)
   public
   end;
+
+var
+  GTFCTableNameCollection : TStringList;
 
 implementation
 
@@ -664,6 +671,24 @@ begin
   Result:=FParent;
 end;
 
+procedure TGTFCOutsetTreeBasicItem.SetDBTableName(AValue: ShortString);
+var
+  i:integer;
+begin
+  i:=GTFCTableNameCollection.IndexOf(AValue);
+  if i=-1 then
+     i:=GTFCTableNameCollection.Add(AValue);
+  if FDBTableNameIndex=i then exit;
+     FDBTableNameIndex:=i;
+end;
+
+function TGTFCOutsetTreeBasicItem.GetDBTableName: ShortString;
+begin
+  Result:='';
+  if (FDBTableNameIndex>-1)and(FDBTableNameIndex<GTFCTableNameCollection.Count) then
+     Result:=GTFCTableNameCollection.Strings[FDBTableNameIndex];
+end;
+
 procedure TGTFCOutsetTreeBasicItem.SetParent(AValue: TGTFCOutsetTreeBasicItem);
 begin
  if FParent=AValue then exit;
@@ -714,6 +739,7 @@ begin
   FColor:=0;
   FData:=nil;
   FDBRecordID:=0;
+  FDBTableNameIndex:=-1;
   FParent:=nil;
   FChildCount:=0;
   FTag:=0;
@@ -730,5 +756,12 @@ destructor TGTFCOutsetTreeBasicItem.Destroy;
 begin
   inherited Destroy;
 end;
+
+Initialization
+  GTFCTableNameCollection :=TStringList.Create;
+  GTFCTableNameCollection.CaseSensitive:=False;
+
+finalization
+  GTFCTableNameCollection.Free;
 
 end.

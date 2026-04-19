@@ -4,6 +4,12 @@
 //    License: LGPL
 //    Dev. Pichugin M. (e-mail: pichugin-swd@mail.ru)
 //
+// ver. 0.56
+// - fix cursor draw in procedure TGTFControl.SLCursorPaint();
+// - fix draw TGraphicConnectionline on filtered row in procedure TGTFControl.RefreshFilterEntity;
+// - add property DBTableName to TGTFCOutsetTreeBasicItem;
+// - add property TGTFControl.ShowTodayWayLine. Separete functions of Today highlight line and row\col highlight;
+//
 // ver. 0.55
 // - Добавлены +/- в дерево строк
 // - Добавлены новые OnEvents

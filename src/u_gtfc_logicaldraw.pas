@@ -4,7 +4,7 @@ unit u_gtfc_logicaldraw;
 //
 //    Модуль компонента Graphic Task Flow Control
 //    Copyright (c) 2013  Pichugin M.
-//    ver. 0.10
+//    rev. 0.10
 //    Разработчик: Pichugin M. (e-mail: pichugin-swd@mail.ru)
 //
 //************************************************************
