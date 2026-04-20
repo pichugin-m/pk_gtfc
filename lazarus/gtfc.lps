@@ -18,8 +18,9 @@
         <ComponentName Value="FgassicMain"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
-        <TopLine Value="1745"/>
-        <CursorPos X="38" Y="1750"/>
+        <IsVisibleTab Value="True"/>
+        <TopLine Value="1501"/>
+        <CursorPos X="51" Y="1514"/>
         <UsageCount Value="237"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -27,26 +28,26 @@
       <Unit2>
         <Filename Value="..\src\u_gtfc_const.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="6"/>
-        <CursorPos X="7" Y="84"/>
+        <EditorIndex Value="4"/>
+        <TopLine Value="48"/>
+        <CursorPos X="16" Y="75"/>
         <UsageCount Value="200"/>
+        <Loaded Value="True"/>
       </Unit2>
       <Unit3>
         <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
-        <TopLine Value="435"/>
-        <CursorPos X="17" Y="447"/>
+        <TopLine Value="5415"/>
+        <CursorPos X="54" Y="5471"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
       </Unit3>
       <Unit4>
         <Filename Value="..\src\u_gtfc_logicaldraw.pas"/>
         <IsPartOfProject Value="True"/>
-        <EditorIndex Value="4"/>
-        <CursorPos X="37" Y="8"/>
+        <EditorIndex Value="5"/>
+        <CursorPos X="16" Y="7"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
       </Unit4>
@@ -54,7 +55,8 @@
         <Filename Value="..\src\u_gtfc_visualobjects.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="2"/>
-        <CursorPos X="41" Y="3750"/>
+        <TopLine Value="1141"/>
+        <CursorPos X="77" Y="1150"/>
         <ExtraEditorCount Value="1"/>
         <ExtraEditor1>
           <EditorIndex Value="-1"/>
@@ -77,8 +79,7 @@
         <Filename Value="..\src\u_gtfc_objecttree.pas"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="3"/>
-        <TopLine Value="734"/>
-        <CursorPos X="15" Y="742"/>
+        <CursorPos X="20" Y="525"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
       </Unit7>
@@ -87,118 +88,118 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="1360"/>
         <CursorPos X="48" Y="1371"/>
-        <UsageCount Value="162"/>
+        <UsageCount Value="161"/>
       </Unit8>
       <Unit9>
         <Filename Value="u_drawconnectionsschem_function.pas"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="60" Y="10"/>
-        <UsageCount Value="57"/>
+        <UsageCount Value="56"/>
       </Unit9>
       <Unit10>
         <Filename Value="..\src\u_dxffile.pas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="956"/>
         <CursorPos X="20" Y="981"/>
-        <UsageCount Value="15"/>
+        <UsageCount Value="14"/>
       </Unit10>
       <Unit11>
         <Filename Value="..\gassi\u_gassi_const.pas"/>
-        <UsageCount Value="80"/>
+        <UsageCount Value="79"/>
       </Unit11>
       <Unit12>
         <Filename Value="..\gassi\u_gassi_drawcontrol.pas"/>
         <CursorPos X="23" Y="20"/>
-        <UsageCount Value="80"/>
+        <UsageCount Value="79"/>
       </Unit12>
       <Unit13>
         <Filename Value="..\gassi\u_gassi_logicaldraw.pas"/>
         <CursorPos X="45" Y="55"/>
-        <UsageCount Value="80"/>
+        <UsageCount Value="79"/>
       </Unit13>
       <Unit14>
         <Filename Value="..\gassi\u_gassi_visualobjects.pas"/>
         <TopLine Value="91"/>
         <CursorPos X="15" Y="5"/>
-        <UsageCount Value="80"/>
+        <UsageCount Value="79"/>
       </Unit14>
       <Unit15>
         <Filename Value="D:\General\u_geometry_functions.pas"/>
         <CursorPos X="52" Y="13"/>
-        <UsageCount Value="80"/>
+        <UsageCount Value="79"/>
       </Unit15>
       <Unit16>
         <Filename Value="C:\Lazarus\lcl\extctrls.pp"/>
         <UnitName Value="ExtCtrls"/>
         <TopLine Value="1012"/>
         <CursorPos X="3" Y="983"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
       </Unit16>
       <Unit17>
         <Filename Value="C:\Lazarus\lcl\controls.pp"/>
         <UnitName Value="Controls"/>
         <TopLine Value="2844"/>
         <CursorPos X="39" Y="2854"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
       </Unit17>
       <Unit18>
         <Filename Value="C:\Lazarus\fpc\2.6.0\source\rtl\objpas\classes\classesh.inc"/>
         <TopLine Value="104"/>
         <CursorPos X="40" Y="122"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
       </Unit18>
       <Unit19>
         <Filename Value="C:\Lazarus\fpc\2.6.0\source\rtl\win\wininc\struct.inc"/>
         <TopLine Value="209"/>
         <CursorPos X="6" Y="226"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="9"/>
       </Unit19>
       <Unit20>
         <Filename Value="C:\Lazarus\lcl\lcltype.pp"/>
         <UnitName Value="LCLType"/>
         <TopLine Value="3053"/>
         <CursorPos X="32" Y="3080"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
       </Unit20>
       <Unit21>
         <Filename Value="C:\Lazarus\lcl\lclclasses.pp"/>
         <UnitName Value="LCLClasses"/>
         <CursorPos X="3" Y="38"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
       </Unit21>
       <Unit22>
         <Filename Value="C:\Lazarus\lcl\graphics.pp"/>
         <UnitName Value="Graphics"/>
         <TopLine Value="688"/>
         <CursorPos X="25" Y="704"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="5"/>
       </Unit22>
       <Unit23>
         <Filename Value="C:\Lazarus\fpc\2.6.0\source\packages\fcl-image\src\fpcanvas.pp"/>
         <UnitName Value="FPCanvas"/>
         <TopLine Value="123"/>
         <CursorPos X="54" Y="146"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="5"/>
       </Unit23>
       <Unit24>
         <Filename Value="..\src\u_gassi_import_dxf.pas"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="36" Y="26"/>
-        <UsageCount Value="37"/>
+        <UsageCount Value="36"/>
       </Unit24>
       <Unit25>
         <Filename Value="C:\lazarus20_x32\fpc\3.2.0\source\rtl\objpas\classes\classesh.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="411"/>
         <CursorPos X="23" Y="429"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="4"/>
       </Unit25>
       <Unit26>
         <Filename Value="C:\lazarus20_x32\fpc\3.2.0\source\packages\rtl-objpas\src\inc\dateutil.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="339"/>
         <CursorPos X="10" Y="361"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="6"/>
       </Unit26>
       <Unit27>
         <Filename Value="C:\lazarus20_x32\fpc\3.2.0\source\packages\fcl-image\src\fpcanvas.pp"/>
@@ -206,7 +207,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="141"/>
         <CursorPos X="27" Y="158"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
       </Unit27>
       <Unit28>
         <Filename Value="C:\lazarus20_32\lcl\graphics.pp"/>
@@ -214,7 +215,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="131"/>
         <CursorPos X="29" Y="146"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="4"/>
       </Unit28>
       <Unit29>
         <Filename Value="C:\lazarus20_32\fpc\3.2.0\source\packages\fcl-image\src\fpcanvas.pp"/>
@@ -222,42 +223,42 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="95"/>
         <CursorPos X="51" Y="111"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="4"/>
       </Unit29>
       <Unit30>
         <Filename Value="C:\lazarus20_x32\fpc\3.2.0\source\rtl\inc\typshrdh.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="108"/>
         <CursorPos X="28" Y="124"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
       </Unit30>
       <Unit31>
         <Filename Value="C:\lazarus20_x32\fpc\3.2.0\source\rtl\inc\typshrd.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="255"/>
         <CursorPos X="3" Y="257"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
       </Unit31>
       <Unit32>
         <Filename Value="C:\lazarus20_x32\components\virtualtreeview\VirtualTrees.pas"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="13980"/>
         <CursorPos X="17" Y="13858"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="6"/>
       </Unit32>
       <Unit33>
         <Filename Value="C:\lazarus20_x32\fpc\3.2.0\source\rtl\inc\objpash.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="194"/>
         <CursorPos X="29" Y="208"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
       </Unit33>
       <Unit34>
         <Filename Value="C:\lazarus20_x32\fpc\3.2.0\source\rtl\inc\objpas.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="324"/>
         <CursorPos X="9" Y="329"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
       </Unit34>
       <Unit35>
         <Filename Value="C:\lazarus20_x32\lcl\controls.pp"/>
@@ -265,7 +266,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="1704"/>
         <CursorPos X="35" Y="1719"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="8"/>
       </Unit35>
       <Unit36>
         <Filename Value="C:\lazarus20_x32\lcl\forms.pp"/>
@@ -273,7 +274,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="836"/>
         <CursorPos X="23" Y="852"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="8"/>
       </Unit36>
       <Unit37>
         <Filename Value="C:\lazarus20_x32\lcl\menus.pp"/>
@@ -281,7 +282,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="394"/>
         <CursorPos X="3" Y="411"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="8"/>
       </Unit37>
       <Unit38>
         <Filename Value="C:\lazarus20_x32\components\lazutils\lazutilities.pas"/>
@@ -289,143 +290,143 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="61"/>
         <CursorPos Y="74"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="9"/>
       </Unit38>
       <Unit39>
         <Filename Value="C:\lazarus20_x32\lcl\include\control.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="4458"/>
         <CursorPos Y="4471"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="9"/>
       </Unit39>
       <Unit40>
         <Filename Value="C:\lazarus46_32\fpc\3.2.2\source\rtl\objpas\classes\classesh.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="600"/>
         <CursorPos X="69" Y="612"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="9"/>
       </Unit40>
     </Units>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="5370" Column="20" TopLine="5347"/>
+        <Caret Line="869" Column="32" TopLine="882"/>
       </Position1>
       <Position2>
         <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="5369" Column="24" TopLine="5349"/>
+        <Caret Line="1171" Column="65" TopLine="1151"/>
       </Position2>
       <Position3>
         <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="3809" Column="20" TopLine="3794"/>
+        <Caret Line="137" Column="23" TopLine="119"/>
       </Position3>
       <Position4>
         <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="3807" Column="34" TopLine="3794"/>
+        <Caret Line="5648" Column="38" TopLine="5625"/>
       </Position4>
       <Position5>
-        <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="3771" Column="40" TopLine="3744"/>
+        <Filename Value="..\src\u_gtfc_visualobjects.pas"/>
+        <Caret Line="841" Column="21" TopLine="828"/>
       </Position5>
       <Position6>
         <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="3047" Column="32" TopLine="3036"/>
+        <Caret Line="5644" Column="4" TopLine="5625"/>
       </Position6>
       <Position7>
         <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="3039" Column="35" TopLine="3035"/>
+        <Caret Line="2791" Column="36" TopLine="2781"/>
       </Position7>
       <Position8>
         <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="3031" Column="74" TopLine="2962"/>
+        <Caret Line="3214" Column="26" TopLine="3195"/>
       </Position8>
       <Position9>
         <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="2947" Column="30" TopLine="2936"/>
+        <Caret Line="3222" Column="30" TopLine="3195"/>
       </Position9>
       <Position10>
         <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="2937" Column="34" TopLine="2933"/>
+        <Caret Line="3478" Column="22" TopLine="3461"/>
       </Position10>
       <Position11>
-        <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="2931" Column="34" TopLine="2920"/>
+        <Filename Value="..\src\u_gtfc_visualobjects.pas"/>
+        <Caret Line="106" Column="6" TopLine="88"/>
       </Position11>
       <Position12>
         <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="2619" Column="23" TopLine="2608"/>
+        <Caret Line="5721" Column="4" TopLine="5702"/>
       </Position12>
       <Position13>
         <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="2618" Column="27" TopLine="2608"/>
+        <Caret Line="3503" Column="22" TopLine="3486"/>
       </Position13>
       <Position14>
-        <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="2403" Column="25" TopLine="2392"/>
+        <Filename Value="..\src\u_gtfc_visualobjects.pas"/>
+        <Caret Line="843" Column="17" TopLine="825"/>
       </Position14>
       <Position15>
-        <Filename Value="..\src\u_gtfc_visualobjects.pas"/>
-        <Caret Line="991" Column="23" TopLine="981"/>
+        <Filename Value="..\src\u_gtfc_objecttree.pas"/>
+        <Caret Line="92" Column="17" TopLine="78"/>
       </Position15>
       <Position16>
-        <Filename Value="..\src\u_gtfc_visualobjects.pas"/>
-        <Caret Line="414" Column="24" TopLine="410"/>
+        <Filename Value="..\src\u_gtfc_objecttree.pas"/>
+        <Caret Line="402" Column="3" TopLine="388"/>
       </Position16>
       <Position17>
-        <Filename Value="..\src\u_gtfc_visualobjects.pas"/>
-        <Caret Line="2529" TopLine="2525"/>
+        <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
+        <Caret Line="2793" TopLine="2779"/>
       </Position17>
       <Position18>
-        <Filename Value="..\src\u_gtfc_visualobjects.pas"/>
-        <Caret Line="2296" TopLine="2284"/>
+        <Filename Value="..\src\u_gtfc_objecttree.pas"/>
+        <Caret Line="400" Column="56" TopLine="388"/>
       </Position18>
       <Position19>
-        <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="3869" TopLine="3849"/>
+        <Filename Value="..\src\u_gtfc_objecttree.pas"/>
+        <Caret Line="38" Column="3" TopLine="44"/>
       </Position19>
       <Position20>
-        <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="3561" TopLine="3549"/>
+        <Filename Value="..\src\u_gtfc_objecttree.pas"/>
+        <Caret Line="76" Column="23" TopLine="51"/>
       </Position20>
       <Position21>
         <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="3829" Column="49" TopLine="3825"/>
+        <Caret Line="2794" Column="25" TopLine="2734"/>
       </Position21>
       <Position22>
         <Filename Value="..\src\u_gtfc_visualobjects.pas"/>
-        <Caret Line="2293" Column="18" TopLine="2284"/>
+        <Caret Line="816" Column="11" TopLine="791"/>
       </Position22>
       <Position23>
-        <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="3741" Column="81" TopLine="3741"/>
+        <Filename Value="u_form_main.pas"/>
+        <Caret Line="1783" Column="18" TopLine="1766"/>
       </Position23>
       <Position24>
         <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="360" Column="28" TopLine="357"/>
+        <Caret Line="1170" Column="65" TopLine="1151"/>
       </Position24>
       <Position25>
         <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="4683" Column="16" TopLine="4675"/>
+        <Caret Line="137" Column="23" TopLine="119"/>
       </Position25>
       <Position26>
-        <Filename Value="..\src\u_gtfc_objecttree.pas"/>
-        <Caret Line="80" Column="58" TopLine="67"/>
+        <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
+        <Caret Line="5651" Column="29" TopLine="5634"/>
       </Position26>
       <Position27>
-        <Filename Value="..\src\u_gtfc_objecttree.pas"/>
-        <Caret Line="74" Column="23" TopLine="65"/>
+        <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
+        <Caret Line="5643" Column="32" TopLine="5634"/>
       </Position27>
       <Position28>
-        <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="511" Column="23" TopLine="507"/>
+        <Filename Value="..\src\u_gtfc_visualobjects.pas"/>
+        <Caret Line="474" Column="26" TopLine="455"/>
       </Position28>
       <Position29>
-        <Filename Value="u_form_main.pas"/>
-        <Caret Line="1478" Column="14" TopLine="1467"/>
+        <Filename Value="..\src\u_gtfc_visualobjects.pas"/>
+        <Caret Line="1116" Column="36" TopLine="1094"/>
       </Position29>
       <Position30>
-        <Filename Value="..\src\u_gtfc_drawcontrol.pas"/>
-        <Caret Line="4723" Column="16" TopLine="4721"/>
+        <Filename Value="..\src\u_gtfc_visualobjects.pas"/>
+        <Caret Line="1100" Column="51" TopLine="1085"/>
       </Position30>
     </JumpHistory>
     <RunParams>

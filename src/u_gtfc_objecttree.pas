@@ -6,7 +6,7 @@ unit u_gtfc_objecttree;
 //
 //    Модуль компонента Graphic Task Flow Control
 //    Copyright (c) 2013  Pichugin M.
-//    rev. 15
+//    rev. 16
 //    Разработчик: Pichugin M. (e-mail: pichugin-swd@mail.ru)
 //
 //************************************************************
@@ -15,7 +15,7 @@ interface
 
 uses
   Contnrs, Classes, Dialogs, SysUtils, Variants, TypInfo,
-  u_gtfc_geometry;
+  u_gtfc_geometry, ComCtrls, ImgList, LCLType;
 
 type
 
@@ -23,6 +23,8 @@ type
 
   TGTFCOutsetBasicTree = class;
   TGTFCOutsetTreeBasicItem = class;
+  TGTFCListColumns = class;
+  TGTFCListColumnItem = class;
 
   { Data types }
 
@@ -30,6 +32,75 @@ type
   //todo
   //TGTFCOutsetTreeState = set of (ttsNone,ttsCreating,ttsEditing,ttsMoving,ttsSelected);
   //TGTFCOutsetTreeDrawStyle = set of (tdsNone,tdsNormal,tdsSelected,tdsEditing,tdsMoving,tdsCreating);
+
+  { TGTFCListColumnItem class }
+
+  TGTFCListColumnItem = class
+  private
+    FAlignment: TAlignment;
+    FAutoSize: Boolean;
+    FCaption: TTranslateString;
+    FColor: integer;
+    FImageIndex: TImageIndex;
+    FMaxWidth: TWidth;
+    FMinWidth: TWidth;
+    FWidth: TWidth;
+    FSortIndicator: TSortIndicator;
+    FTag: PtrInt;
+    FVisible: Boolean;
+    function GetWidth: TWidth;
+    procedure SetAlignment(AValue: TAlignment);
+    procedure SetAutoSize(AValue: Boolean);
+    procedure SetCaption(AValue: TTranslateString);
+    procedure SetColor(AValue: integer);
+    procedure SetImageIndex(AValue: TImageIndex);
+    procedure SetMaxWidth(AValue: TWidth);
+    procedure SetMinWidth(AValue: TWidth);
+    procedure SetSortIndicator(AValue: TSortIndicator);
+    procedure SetVisible(AValue: Boolean);
+    procedure SetWidth(AValue: TWidth);
+
+  public
+    property Alignment: TAlignment read FAlignment write SetAlignment;
+    property AutoSize: Boolean read FAutoSize write SetAutoSize;
+    property Caption: TTranslateString read FCaption write SetCaption;
+    property ImageIndex: TImageIndex read FImageIndex write SetImageIndex;
+    property Color : integer read FColor write SetColor;
+    property MaxWidth: TWidth read FMaxWidth write SetMaxWidth;
+    property MinWidth: TWidth read FMinWidth write SetMinWidth;
+    property Tag: PtrInt read FTag write FTag;
+    property Visible: Boolean read FVisible write SetVisible;
+    property Width: TWidth read GetWidth write SetWidth;
+    property SortIndicator: TSortIndicator read FSortIndicator write SetSortIndicator;
+
+    constructor Create;
+    destructor Destroy; override;
+  end;
+
+  { TGTFCListColumns class }
+
+  TGTFCListColumns = class(TObjectList)
+  private
+    FUpdateCount              : Integer;
+  protected
+    function GetItem(Index: Integer): TGTFCListColumnItem;
+    procedure SetItem(Index: Integer; const Value: TGTFCListColumnItem);
+  public
+    property Items[Index: Integer]: TGTFCListColumnItem read GetItem
+                                                         write SetItem; default;
+    procedure Insert(Index: Integer; Item: TGTFCListColumnItem);
+    function Add(Item: TGTFCListColumnItem): Integer; overload;
+    function Add: TGTFCListColumnItem; overload;
+    procedure Move(CurIndex, NewIndex: Integer);
+    procedure Clear; override;
+
+    procedure BeginUpdate; virtual;
+    procedure EndUpdate; virtual;
+    function GetUpdateStatus: Boolean;
+
+    constructor Create;
+    destructor Destroy; override;
+  end;
 
   { TGTFCOutsetTreeBasicItem class }
 
@@ -301,6 +372,173 @@ begin
      finally
        TmpOutList.Free;
      end;
+end;
+
+{ TGTFCListColumns }
+
+function TGTFCListColumns.GetUpdateStatus: Boolean;
+begin
+  Result :=(FUpdateCount>0);
+end;
+
+function TGTFCListColumns.GetItem(Index: Integer): TGTFCListColumnItem;
+begin
+  Result := TGTFCListColumnItem(inherited GetItem(Index));
+end;
+
+procedure TGTFCListColumns.SetItem(Index: Integer;
+  const Value: TGTFCListColumnItem);
+begin
+  inherited SetItem(Index, Value);
+end;
+
+procedure TGTFCListColumns.Insert(Index:Integer; Item:TGTFCListColumnItem);
+begin
+  inherited Insert(Index, Item);
+end;
+
+function TGTFCListColumns.Add(Item: TGTFCListColumnItem): Integer;
+begin
+  Result := inherited Add(Item);
+end;
+
+function TGTFCListColumns.Add: TGTFCListColumnItem;
+begin
+   Result:=TGTFCListColumnItem.Create;
+   Add(Result);
+end;
+
+procedure TGTFCListColumns.Move(CurIndex, NewIndex: Integer);
+begin
+  inherited Move(CurIndex, NewIndex);
+end;
+
+procedure TGTFCListColumns.Clear;
+begin
+  inherited Clear;
+  FUpdateCount   := 0;
+end;
+
+procedure TGTFCListColumns.BeginUpdate;
+begin
+  FUpdateCount := FUpdateCount + 1;
+end;
+
+procedure TGTFCListColumns.EndUpdate;
+begin
+  if FUpdateCount > 0 then
+  begin
+    FUpdateCount := FUpdateCount - 1;
+  end;
+
+  if FUpdateCount =0 then
+  begin
+
+  end;
+
+  if FUpdateCount<0 then
+  begin
+    FUpdateCount := 0;
+  end;
+end;
+
+constructor TGTFCListColumns.Create;
+begin
+  inherited Create;
+  FUpdateCount   := 0;
+end;
+
+destructor TGTFCListColumns.Destroy;
+begin
+  inherited Destroy;
+end;
+
+{ TGTFCListColumnItem }
+
+procedure TGTFCListColumnItem.SetColor(AValue: integer);
+begin
+  if FColor=AValue then Exit;
+  FColor:=AValue;
+end;
+
+function TGTFCListColumnItem.GetWidth: TWidth;
+begin
+  Result:=FWidth;
+end;
+
+procedure TGTFCListColumnItem.SetAlignment(AValue: TAlignment);
+begin
+  if FAlignment=AValue then Exit;
+  FAlignment:=AValue;
+end;
+
+procedure TGTFCListColumnItem.SetAutoSize(AValue: Boolean);
+begin
+  if FAutoSize=AValue then Exit;
+  FAutoSize:=AValue;
+end;
+
+procedure TGTFCListColumnItem.SetCaption(AValue: TTranslateString);
+begin
+  if FCaption=AValue then Exit;
+  FCaption:=AValue;
+end;
+
+procedure TGTFCListColumnItem.SetImageIndex(AValue: TImageIndex);
+begin
+  if FImageIndex=AValue then Exit;
+  FImageIndex:=AValue;
+end;
+
+procedure TGTFCListColumnItem.SetMaxWidth(AValue: TWidth);
+begin
+  if FMaxWidth=AValue then Exit;
+  FMaxWidth:=AValue;
+end;
+
+procedure TGTFCListColumnItem.SetMinWidth(AValue: TWidth);
+begin
+  if FMinWidth=AValue then Exit;
+  FMinWidth:=AValue;
+end;
+
+procedure TGTFCListColumnItem.SetSortIndicator(AValue: TSortIndicator);
+begin
+  if FSortIndicator=AValue then Exit;
+  FSortIndicator:=AValue;
+end;
+
+procedure TGTFCListColumnItem.SetVisible(AValue: Boolean);
+begin
+  if FVisible=AValue then Exit;
+  FVisible:=AValue;
+end;
+
+procedure TGTFCListColumnItem.SetWidth(AValue: TWidth);
+begin
+   if FWidth=AValue then Exit;
+  FWidth:=AValue;
+end;
+
+constructor TGTFCListColumnItem.Create;
+begin
+  inherited Create;
+  FCaption     :='';
+  FAlignment   :=taLeftJustify;
+  FAutoSize    :=True;
+  FColor       :=0;
+  FImageIndex  :=-1;
+  FMaxWidth    :=250;
+  FMinWidth    :=50;
+  FWidth       :=50;
+  FSortIndicator :=siNone;
+  FTag           :=0;
+  FVisible       :=True;
+end;
+
+destructor TGTFCListColumnItem.Destroy;
+begin
+  inherited Destroy;
 end;
 
 { TGTFCOutsetRowTree }

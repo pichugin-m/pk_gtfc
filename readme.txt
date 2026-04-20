@@ -4,6 +4,11 @@
 //    License: LGPL
 //    Dev. Pichugin M. (e-mail: pichugin-swd@mail.ru)
 //
+// ver. 0.57
+// - fix error with TListColumns class
+// - fix error with draw columns if visible=off
+// - change text paint in task rect
+//
 // ver. 0.56
 // - fix cursor draw in procedure TGTFControl.SLCursorPaint();
 // - fix draw TGraphicConnectionline on filtered row in procedure TGTFControl.RefreshFilterEntity;

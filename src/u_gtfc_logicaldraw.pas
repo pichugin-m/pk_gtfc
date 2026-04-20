@@ -4,7 +4,7 @@ unit u_gtfc_logicaldraw;
 //
 //    Модуль компонента Graphic Task Flow Control
 //    Copyright (c) 2013  Pichugin M.
-//    rev. 0.10
+//    rev. 0.11
 //    Разработчик: Pichugin M. (e-mail: pichugin-swd@mail.ru)
 //
 //************************************************************
@@ -56,6 +56,7 @@ type
     FOnPointDraw      : TPointCustomDrawEvent;
     FOnLineDraw       : TLineCustomDrawEvent;
     FOnPolylineDraw   : TPolylineCustomDrawEvent;
+    FOnLineSDraw      : TPolylineCustomDrawEvent;
     FOnPolygonDraw    : TPolygonCustomDrawEvent;
     FOnRectangelDraw  : TRectangelCustomDrawEvent;
     FOnFillDraw       : TRectangelCustomDrawEvent;
@@ -76,6 +77,7 @@ type
     property OnPointDraw      : TPointCustomDrawEvent read FOnPointDraw write FOnPointDraw;
     property OnLineDraw       : TLineCustomDrawEvent read FOnLineDraw write FOnLineDraw;
     property OnPolylineDraw   : TPolylineCustomDrawEvent read FOnPolylineDraw write FOnPolylineDraw;
+    property OnLineSDraw      : TPolylineCustomDrawEvent read FOnLineSDraw write FOnLineSDraw;
     property OnPolygonDraw    : TPolygonCustomDrawEvent read FOnPolygonDraw write FOnPolygonDraw;
     property OnRectangelDraw  : TRectangelCustomDrawEvent read FOnRectangelDraw write FOnRectangelDraw;
     property OnFillDraw       : TRectangelCustomDrawEvent read FOnFillDraw write FOnFillDraw;
@@ -92,6 +94,7 @@ type
     procedure SetFontStyleDraw(FontName: AnsiString; FontSize: Integer; FontStyle: TFontStyles);
     procedure PointDraw(X, Y: Integer);
     procedure LineDraw(X1, Y1, X2, Y2: Integer);
+    procedure LineSDraw(X1, Y1, X2, Y2, X3, Y3, X4, Y4: Integer);
     procedure PolylineDraw(APoints:Array of TPoint);
     procedure PolylineDraw(AX1, AY1: Integer; APoints:Array of TPoint);
     procedure PolygonDraw(APoints:Array of TPoint);
@@ -148,6 +151,15 @@ end;
 procedure TLogicalDraw.LineDraw(X1, Y1, X2, Y2: Integer);
 begin
     if Assigned(FOnLineDraw) then FOnLineDraw(X1, Y1, X2, Y2);
+end;
+
+procedure TLogicalDraw.LineSDraw(X1, Y1, X2, Y2, X3, Y3, X4, Y4: Integer);
+var
+  SPoints: array of TPoint;
+begin
+   SPoints:=[Point(X1, Y1),Point(X2, Y2),Point(X3, Y3),Point(X4, Y4)];
+   if Assigned(FOnlineSDraw) then
+    FOnlineSDraw(SPoints);
 end;
 
 procedure TLogicalDraw.PolylineDraw(APoints: array of TPoint);

@@ -3,8 +3,9 @@ Component show chart gantt for Lazarus\CodeTyphon
 
 ## Version
 	
-  current 0.56 (2026-04-19)
-  last    0.55 (2026-04-18)
+  - 0.57 (2026-04-21)<br>
+  - 0.56 (2026-04-19)<br>
+  - 0.55 (2026-04-18)
 
 ## Notice
 The design is based on a visual object container component adapted and redesigned for Gantt charts. The coordinate system has been simplified to integers, but the white space is limited only by the range of displayed dates.

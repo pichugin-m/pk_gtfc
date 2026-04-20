@@ -1519,6 +1519,7 @@ begin
 
   GTFControl.ActiveDocument.SetFirstColumn('Договор');
   GTFControl.ActiveDocument.SetExtendedColumns(['Статус','Начало','Окончание']);
+  //GTFControl.ActiveDocument.ExtColumns.Items[2].Visible:=False;
 
   for i1:=0 to Random(4) do
   begin

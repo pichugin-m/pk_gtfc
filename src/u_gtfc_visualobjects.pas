@@ -4,7 +4,7 @@ unit u_gtfc_visualobjects;
 //
 //    Модуль компонента Graphic Task Flow Control
 //    Copyright (c) 2013  Pichugin M.
-//    rev. 0.36
+//    rev. 0.37
 //    Разработчик: Pichugin M. (e-mail: pichugin-swd@mail.ru)
 //
 //************************************************************
@@ -103,7 +103,7 @@ type
     FNodePaddingLeftRight :Integer;
     FFontSize             : Integer;
     FFontName             : AnsiString;
-    FExtColumns           : TListColumns;
+    FExtColumns           : TGTFCListColumns;
   public
     property  ModelSpace  :TWorkSpace read FModelSpace
                                       write FModelSpace;
@@ -112,7 +112,7 @@ type
     property  Cols        :TGTFCOutsetColTree read FCols
                                       write FCols;
 
-    property  ExtColumns  :TListColumns read FExtColumns
+    property  ExtColumns  :TGTFCListColumns read FExtColumns
                                       write FExtColumns;
 
     property  RowsAutoSort  :Boolean read GetRowsAutoSort
@@ -780,7 +780,7 @@ end;
 procedure TGTFDrawDocumentCustom.SetExtendedColumns(AData: TStringArray);
 var
    i:integer;
-   Item:TListColumn;
+   Item:TGTFCListColumnItem;
 begin
   FExtColumns.BeginUpdate;
 
@@ -832,7 +832,7 @@ end;
 
 procedure TGTFDrawDocumentCustom.SetFirstColumn(AData: String);
 var
-   Item:TListColumn;
+   Item:TGTFCListColumnItem;
 begin
   FExtColumns.BeginUpdate;
 
@@ -1103,46 +1103,75 @@ begin
         case iGridScale of
             120:
             begin
-                Y4          :=FTextHeight div 6;
-                Y1          :=TmpVertex0.Y+Y4*3-4;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift+5, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
-                Y1          :=Y1+Y4*3;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift+5, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
-            end;
-            130:
-            begin
-                Y4          :=FTextHeight div 6;
-                Y1          :=TmpVertex0.Y+Y4*3-2;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift+5, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
-                Y1          :=Y1+Y4*3;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift+5, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
-            end;
-            140:
-            begin
-                Y4          :=FTextHeight div 6;
-                Y1          :=TmpVertex0.Y+Y4*3-4;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift+5, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
-                Y1          :=Y1+Y4*3;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift+5, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
-            end;
-            150:
-            begin
+                  {
                 Y4          :=FTextHeight div 6;
                 Y1          :=TmpVertex0.Y+Y4*3;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift+5, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
                 Y1          :=Y1+Y4*3;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift+5, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
+                }
+                Y4          :=FTextHeight div 2;
+                Y1          :=TmpVertex0.Y+Y4-1;
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
+                Y1          :=Y1+Y4-1;
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
+
+            end;
+            130:
+            begin  {
+                Y4          :=FTextHeight div 6;
+                Y1          :=TmpVertex0.Y+Y4*3-2;
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
+                Y1          :=Y1+Y4*3;
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
+                }
+                 Y4          :=FTextHeight div 2;
+                Y1          :=TmpVertex0.Y+Y4-1;
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
+                Y1          :=Y1+Y4-1;
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
+
+            end;
+            140:
+            begin   {
+                Y4          :=FTextHeight div 6;
+                Y1          :=TmpVertex0.Y+Y4*3-4;
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
+                Y1          :=Y1+Y4*3;
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
+                }
+                Y4          :=FTextHeight div 2+1;
+                Y1          :=TmpVertex0.Y+Y4-1;
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
+                Y1          :=Y1+Y4-1;
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
+
+            end;
+            150:
+            begin  {
+                Y4          :=FTextHeight div 6;
+                Y1          :=TmpVertex0.Y+Y4*3;
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
+                Y1          :=Y1+Y4*3;
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
+                }
+                Y4          :=FTextHeight div 2+1;
+                Y1          :=TmpVertex0.Y+Y4-1;
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
+                Y1          :=Y1+Y4-1;
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
+
             end;
             else begin
                Y1          :=TmpVertex0.Y+FTextHeight div 2;
 
-               if iGridScale<100 then
-                  Y1:=Y1-2;
+               //if iGridScale<100 then
+               //   Y1:=Y1-2;
 
                if Length(FTextSecondLine)>0 then
-                 LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift+5, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText+' ● '+FTextSecondLine, gaAttachmentPointMiddleLeft)
+                 LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText+' ● '+FTextSecondLine, gaAttachmentPointMiddleLeft)
                else
-                 LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift+5, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
+                 LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
             end;
         end;
 
@@ -2527,19 +2556,22 @@ var
 begin
 
     if edsSelected in AStyle then
-       LogicalDrawing.SetStyleDraw(LINETYPE_SELECTED,GetLineWeight(FLineWeight),GetColor(FColor))
+       LogicalDrawing.SetStyleDraw(LINETYPE_SELECTED,GetLineWeight(gaLnWtDefault),GetColor(FColor))
     else
-       LogicalDrawing.SetStyleDraw(LINETYPE_SOLID,GetLineWeight(FLineWeight),GetColor(FColor));
+       LogicalDrawing.SetStyleDraw(LINETYPE_SOLID,GetLineWeight(gaLnWtDefault),GetColor(FColor));
 
     GetLinePointsVertex(Points);
     if Length(Points)>1 then
     begin
+      {
       fpoint:=Points[0];
       for i:=0 to high(Points) do
       begin
           LogicalDrawing.LineDraw((fpoint.X*AScaleX)+Xshift,(fpoint.Y*AScaleY)+Yshift,(Points[i].X*AScaleX)+Xshift,(Points[i].Y*AScaleY)+Yshift);
           fpoint:=Points[i];
       end;
+      }
+      LogicalDrawing.LineSDraw(Points[0].X,Points[0].Y,Points[1].X,Points[1].Y,Points[2].X,Points[2].Y,Points[3].X,Points[3].Y);
 
       LogicalDrawing.SetStyleDraw(LINETYPE_SOLID,GetLineWeight(gaLnWtTriple),GetColor(FColor));
 

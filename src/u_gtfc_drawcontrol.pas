@@ -4,7 +4,7 @@ unit u_gtfc_drawcontrol;
 //
 //    Graphic Task Flow Control
 //    Copyright (c) 2023-2026  Pichugin M.
-//    ver. 0.56
+//    ver. 0.57
 //    Разработчик: Pichugin Maksim (e-mail: pichugin-swd@mail.ru)
 //
 //************************************************************
@@ -321,6 +321,7 @@ type
     FScrollBarHorizontalUpdate       : Boolean;
     FScrollBarVertical               : TScrollBar;
     FScrollBarHorizontal             : TScrollBar;
+    procedure LineSDraw(APoints: array of TPoint);
   private
     procedure DrawGridLine(ACanvas: TCanvas; AX1, AY1, AX2, AY2: Integer);
     procedure DrawHighLightFrame(ACanvas: TCanvas; AX1, AY1, AX2, AY2: Integer);
@@ -986,17 +987,7 @@ begin
   FSelectStyle                       :=[aasoINSIDE]; //[aasoBASEPOINT]+[aasoVERTEX]+[aasoBORDER]+
   FSelectListStyle                   :=[];
   FSelectObjectFilter                :=[etAll];
-  ActiveDocument                     :=TGTFDrawDocument.Create(self);
   FDefaultFont                       :=TFont.Create;
-
-  if Assigned(ActiveDocument)then
-  begin
-       ActiveDocument.OnChange       :=@MainControlPaint;
-  end;
-
-  ActiveDocument.FGridLineWidth        :=GridLineWidth;
-  ActiveDocument.FNodePaddingTopBottom :=NodePaddingTopBottom;
-  ActiveDocument.FNodePaddingLeftRight :=NodePaddingLeftRight;
 
   FMessagesList                      :=TStringList.Create;
   FTimerMessage                      :=TTimer.Create(AOwner);
@@ -1142,6 +1133,7 @@ begin
    FLogicalDraw.OnSetFontStyle       :=@SetFontStyleDraw;
    FLogicalDraw.OnLineDraw           :=@LineDraw;
    FLogicalDraw.OnPolylineDraw       :=@PolylineDraw;
+   FLogicalDraw.OnLineSDraw          :=@LineSDraw;
    FLogicalDraw.OnCircleDraw         :=@CircleDraw;
    FLogicalDraw.OnArcDraw            :=@ArcDraw;
    FLogicalDraw.OnPointDraw          :=@PointDraw;
@@ -1172,8 +1164,20 @@ begin
 
    FOnColBGBeforeDrawEvent           :=nil;
 
-   SetDefaultSettings;
    SupportImageCreate(Self);
+   SetDefaultSettings;
+
+    ActiveDocument                     :=TGTFDrawDocument.Create(self);
+    if Assigned(ActiveDocument)then
+    begin
+         ActiveDocument.OnChange       :=@MainControlPaint;
+    end;
+
+    ActiveDocument.FGridLineWidth        :=GridLineWidth;
+    ActiveDocument.FNodePaddingTopBottom :=NodePaddingTopBottom;
+    ActiveDocument.FNodePaddingLeftRight :=NodePaddingLeftRight;
+
+    ScrollToBegin;
 end;
 
 destructor TGTFControl.Destroy;
@@ -1333,7 +1337,6 @@ begin
     FGraphDrawDatePrecision                   :=True;
     FGraphDateTimeBegin                       :=DateUtils.IncDay(Now,-65);
     FGraphDateTimeEnd                         :=DateUtils.RecodeDate(Now,YearOf(Now)+1,MonthOf(Now),1);
-    ScrollToBegin;
 end;
 
 procedure TGTFControl.Repaint;
@@ -3485,16 +3488,19 @@ begin
    GroupPosX1:=GroupPosX2-GridLineWidth;
    for i1:=1 to ActiveDocument.ExtColumns.Count-1 do
    begin
-       sText      :=ActiveDocument.ExtColumns.Items[i1].Caption;
-       TextWidth  :=TmpCanvas.GetTextWidth(sText);
-       TextHeight :=TmpCanvas.GetTextHeight(sText);
+       if ActiveDocument.ExtColumns.Items[i1].Visible then
+       begin
+         sText      :=ActiveDocument.ExtColumns.Items[i1].Caption;
+         TextWidth  :=TmpCanvas.GetTextWidth(sText);
+         TextHeight :=TmpCanvas.GetTextHeight(sText);
 
-       GroupPosX2:=GroupPosX1+1+ColExtWidth+GridLineWidth;
+         GroupPosX2 :=GroupPosX1+1+ColExtWidth+GridLineWidth;
 
-       TmpCanvas.Rectangle(GroupPosX1,PosY1,GroupPosX2,PosY2);
-       TmpCanvas.TextRect(Rect(GroupPosX1,PosY1,GroupPosX2,PosY2),GroupPosX1+((GroupPosX2-GroupPosX1)div 2)-(TextWidth div 2),PosY1+(iColHeight div 2)-(TextHeight div 2),sText);
+         TmpCanvas.Rectangle(GroupPosX1,PosY1,GroupPosX2,PosY2);
+         TmpCanvas.TextRect(Rect(GroupPosX1,PosY1,GroupPosX2,PosY2),GroupPosX1+((GroupPosX2-GroupPosX1)div 2)-(TextWidth div 2),PosY1+(iColHeight div 2)-(TextHeight div 2),sText);
 
-       GroupPosX1:=GroupPosX2-GridLineWidth;
+         GroupPosX1:=GroupPosX2-GridLineWidth;
+       end;
    end;
    //Счет
    if ActiveDocument.ExtColumns.Count>0 then
@@ -5093,6 +5099,124 @@ begin
    FDrawLayerMainCanvas.Polyline(arPoints);
 end;
 
+{
+
+type
+  TPointArr = array of TPoint;
+
+// Вспомогательная функция: вычисление базисной функции B-сплайна
+function Basis(i, k: Integer; t: Double; const Knots: array of Double): Double;
+var
+  denom1, denom2: Double;
+begin
+  if k = 1 then
+  begin
+    if (Knots[i] <= t) and (t < Knots[i + 1]) then
+      Result := 1
+    else
+      Result := 0;
+    Exit;
+  end;
+
+  denom1 := Knots[i + k - 1] - Knots[i];
+  denom2 := Knots[i + k] - Knots[i + 1];
+
+  Result := 0;
+  if denom1 > 0 then
+    Result := Result + (t - Knots[i]) / denom1 * Basis(i, k - 1, t, Knots);
+  if denom2 > 0 then
+    Result := Result + (Knots[i + k] - t) / denom2 * Basis(i + 1, k - 1, t, Knots);
+end;
+
+// Основная процедура рисования B-сплайна
+procedure DrawBSpline(Points: TPointArr; Canvas: TCanvas; StepsPerSegment: Integer = 20);
+var
+  i, j, n, k: Integer;
+  t, step: Double;
+  x, y: Double;
+  Knots: array of Double;
+begin
+  n := Length(Points);
+  if n < 4 then Exit; // Минимум 4 точки для кубического B-сплайна
+
+  k := 3; // Степень сплайна (кубический)
+
+  // Генерация узлового вектора (равномерный, однородный B-сплайн)
+  SetLength(Knots, n + k + 2);
+  for i := 0 to High(Knots) do
+    Knots[i] := i;
+
+  // Рисуем кривую
+  for i := k to n do
+  begin
+    step := (Knots[i + 1] - Knots[i]) / StepsPerSegment;
+    t := Knots[i];
+    while t < Knots[i + 1] do
+    begin
+      x := 0;
+      y := 0;
+      for j := Low(Points) to High(Points) do
+      begin
+        x := x + Points[j].X * Basis(j, k + 1, t, Knots);
+        y := y + Points[j].Y * Basis(j, k + 1, t, Knots);
+      end;
+      if t = Knots[i] then
+        Canvas.MoveTo(Round(x), Round(y))
+      else
+        Canvas.LineTo(Round(x), Round(y));
+      t := t + step;
+    end;
+  end;
+end;
+
+}
+
+procedure DrawSpline(AX1, AY1, AX2, AY2, AX3, AY3, AX4, AY4: Integer; ACanvas: TCanvas);
+var
+  t: Double;
+  x, y: Integer;
+  i: Integer;
+const
+  Steps = 36; // Чем больше, тем плавнее линия
+begin
+  ACanvas.MoveTo(AX1, AY1);
+  for i := 1 to Steps do
+  begin
+    t := i / Steps;
+    // Формула кубического Безье
+    x := Round(
+      (1 - t) * (1 - t) * (1 - t) * AX1 +
+      3 * (1 - t) * (1 - t) * t * AX2 +
+      3 * (1 - t) * t * t * AX3 +
+      t * t * t * AX4
+    );
+    y := Round(
+      (1 - t) * (1 - t) * (1 - t) * AY1 +
+      3 * (1 - t) * (1 - t) * t * AY2 +
+      3 * (1 - t) * t * t * AY3 +
+      t * t * t * AY4
+    );
+    ACanvas.LineTo(x, y);
+  end;
+end;
+
+procedure TGTFControl.LineSDraw(APoints: array of TPoint);
+var
+  i:integer;
+  arPoints:Array of TPoint;
+begin
+  arPoints:=[];
+  i:=Length(APoints);
+  SetLength(arPoints,i);
+  for i:=0 to high(APoints) do
+  begin
+      arPoints[i]:=PointWCSToPointSCS(APoints[i].X,APoints[i].Y);
+  end;
+  DrawSpline(arPoints[0].X,arPoints[0].Y,arPoints[1].X,
+  arPoints[1].Y,arPoints[2].X,arPoints[2].Y,
+  arPoints[3].X,arPoints[3].Y,FDrawLayerMainCanvas);
+end;
+
 procedure TGTFControl.PolygonDraw(APoints: array of TPoint);
 var
   i:integer;
@@ -5520,10 +5644,10 @@ begin
   FDrawControl                   :=TGTFControl(AOwner);
   Rows                           :=TGTFCOutsetRowTree.Create;
   Cols                           :=TGTFCOutsetColTree.Create;
-  FExtColumns                    :=TListColumns.Create(nil);
+  FExtColumns                    :=TGTFCListColumns.Create;
   //Предустановки параметров GetFontData(Application.MainForm.Handle)
   FFontSize                       :=8;
-  FFontName                       :='default';
+  FFontName                       :=Screen.SystemFont.Name;
 
   FViewPos.X                     :=10;
   FViewPos.Y                     :=10;
@@ -5535,6 +5659,7 @@ begin
   FViewBookmark.HBookmarkValue   :=DateUtils.IncDay(Now,-2);
   FViewBookmark.VBookmarkValue   :=Null;
   }
+
   BookmarkToNow;
 
   EntityIDCountIndexA:=0;
