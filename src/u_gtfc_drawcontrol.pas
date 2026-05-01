@@ -4,7 +4,7 @@ unit u_gtfc_drawcontrol;
 //
 //    Graphic Task Flow Control
 //    Copyright (c) 2023-2026  Pichugin M.
-//    ver. 0.57
+//    ver. 0.58
 //    Разработчик: Pichugin Maksim (e-mail: pichugin-swd@mail.ru)
 //
 //************************************************************
@@ -129,7 +129,6 @@ type
     FMVertArray         :TModifyVertexArray;
     FViewBookmark       :TGTFViewBookmark;
     FViewPos            :TGTFPoint;
-
     function GetDocument:TGTFDrawDocumentCustom;
   published
     property  EditMode:TEntityEditMode read FEditMode write FEditMode;
@@ -153,6 +152,8 @@ type
 
     function CreateTask :TGraphicTask;
     function CreateConnectionline :TGraphicConnectionline;
+    function CreateFrameLine: TGraphicFrameLine;
+    function CreateLandmark: TGraphicLandmark;
 
     function GetEntityID:ShortString;
     function GetDeltaVertex:Integer; override;
@@ -163,6 +164,7 @@ type
     function GetColByDateTime(AValue: TDateTime): Integer;
 
     procedure BookmarkToNow;
+    procedure BookmarkUpdate;
 
     procedure MVertArray(Value:TModifyVertex);
     procedure DeselectAll; override;
@@ -198,11 +200,20 @@ type
     // Размер захвата курсора. Размер зоны поиск
     FCursorDeltaSize                 :Integer;
     FDeltaCord                       :Integer; //Размеры вершин
+
     FVertexBasePointColor            :TColor;
     FVertexCustomColor               :TColor;
     FVertexSelectColor               :TColor;
     FCursorColor                     :TColor;
     FBackgroundColor                 :TColor;
+
+    FBackgroundColorHL               :TColor;
+    FBackgroundColorDayOff           :TColor;
+    FBackgroundColorToDay            :TColor;
+    FBackgroundColorRowDisabled      :TColor;
+
+    FPenColorHL                      :TColor;
+
     FDrawCursorStyle                 :TCursorStyle; //Отображать свой курсор
     FRuleStepA                       :Integer;
     FRuleStepB                       :Integer;
@@ -223,8 +234,10 @@ type
     FDocument                        :TGTFDrawDocument;
     // Переменные состоянния
     FUpdateCount                     :Integer;
-    FDoSecondDraw                    :Boolean;
     FFirstPaint                      :Boolean;
+    FColNeedUpdateRange              :Boolean;
+    FDoScrollToBookmark              :Boolean;
+
     FDrawFont                        :Boolean;
     FMouseButtonPressed              :Boolean;
     FMouseButtonUpPos                :TPoint;  //Запоминаем положение при отпускании кнопки
@@ -260,10 +273,12 @@ type
     //Слои рисования диаграммы
     FDrawLayerMain                   :TBitMap;
     FDrawLayerOutsetBorder           :TBitMap;
+    FTempDrawLayer                   :TBitMap;
     //
     //
     FDrawLayerMainCanvas             :TCanvas;
     FDrawLayerOutsetBorderCanvas     :TCanvas;
+    FTempDrawLayerCanvas             :TCanvas;
 
     FDataBitMap                      :TBitMap;
     FDataBitMapEnabled               :Boolean;
@@ -297,6 +312,7 @@ type
     FFrameViewModeText               :String;
     FFrameViewModeColor              :TColor;
 
+
     FColWidth                        : Integer;
     FColExtWidth                     : Integer;
     FRowHeight                       : Integer;
@@ -312,6 +328,7 @@ type
     FLeftOutsetBorderVCapWidth        : Integer;
     //Высота линейки с датами
     FTopOutsetBorderHeight           : Integer;
+    FDataAreaHeight                  : Integer;
 
     FGraphDateTimeBegin              : TDateTime;
     FGraphDateTimeEnd                : TDateTime;
@@ -321,7 +338,7 @@ type
     FScrollBarHorizontalUpdate       : Boolean;
     FScrollBarVertical               : TScrollBar;
     FScrollBarHorizontal             : TScrollBar;
-    procedure LineSDraw(APoints: array of TPoint);
+    FImageList                       : TImageList;
   private
     procedure DrawGridLine(ACanvas: TCanvas; AX1, AY1, AX2, AY2: Integer);
     procedure DrawHighLightFrame(ACanvas: TCanvas; AX1, AY1, AX2, AY2: Integer);
@@ -335,6 +352,10 @@ type
     function GetLeftOutsetExtColCount: Integer;
     //Кол-во видимых дополнитлеьных столбцов
     function GetLeftOutsetExtColVisibleCount: Integer;
+    procedure SetGraphDateTimeBegin(AValue: TDateTime);
+    procedure SetGraphDateTimeEnd(AValue: TDateTime);
+    procedure SetGraphDrawDatePrecision(AValue: Boolean);
+    procedure SetGraphMultiplicity(AValue: TGraphMultiplicity);
     procedure SetTreeButtonStyle(AValue: TGraphTreeButtonStyle);
 
     // Рисование интерфейса
@@ -354,8 +375,8 @@ type
     procedure SetGridScale(AValue: Integer);
     procedure SetRowHeight(AValue: Integer);
 
-    procedure SuperPaint(Sender: TObject);
-    procedure MainControlPaint(Sender: TObject);
+    procedure SLControlPaintL1(Sender: TObject);
+    procedure SLControlPaintL2(Sender: TObject);
     procedure SLOutsetGridBGPaint(Sender: TObject);
     procedure SLOutsetGridPaint(Sender: TObject);
     procedure SLOutsetBorderHeaderPaint(Sender: TObject);
@@ -384,6 +405,8 @@ type
 
     procedure SetFontStyleDraw(FontName: AnsiString;FontSize: Integer;FontStyle: TFontStyles);
     procedure SetStyleDraw(LineType:String; LineWidth:TgaLineWeight; AColor:TgaColor);
+    procedure LineSDraw(APoints: array of TPoint);
+    procedure ImageDraw(X, Y: Integer; AIndex: Smallint);
     procedure LineDraw(X1, Y1, X2, Y2: Integer);
     procedure PolylineDraw(APoints:Array of TPoint);
     procedure PolygonDraw(APoints:Array of TPoint);
@@ -427,6 +450,7 @@ type
     procedure gaMoveVertexAction(Sender: TObject);
     procedure RefreshEntityDraw;
     procedure TimerMessageOnTimer(Sender: TObject);
+    //Создание столбцов дат по двум датам диапазона
     procedure RefreshColls;
   published
     property DevelopMode        :Boolean read FDevelop write FDevelop;
@@ -449,15 +473,16 @@ type
     property ShowTodayWayLine   :Boolean read FTodayWayLine write FTodayWayLine;
     property AntiLayering       :Boolean read FAntiLayering write FAntiLayering;
     property ShowGroupHorizontal:Boolean read FShowGroupHorizontal write FShowGroupHorizontal;
-    property GridColor          :TColor read FGridColor write FGridColor;
 
     // Кратность графика
-    property GraphMultiplicity     :TGraphMultiplicity read FGraphMultiplicity write FGraphMultiplicity;
+    property GraphMultiplicity     :TGraphMultiplicity read FGraphMultiplicity write SetGraphMultiplicity;
     property GraphMultiplicityDraw :TGraphMultiplicity read GetGraphMultiplicityDrawPrecision;
-    property GraphDateTimeBegin    :TDateTime read FGraphDateTimeBegin write FGraphDateTimeBegin;
-    property GraphDateTimeEnd      :TDateTime read FGraphDateTimeEnd write FGraphDateTimeEnd;
-    property GraphDrawDatePrecision :Boolean read FGraphDrawDatePrecision write FGraphDrawDatePrecision;
-
+    property GraphDateTimeBegin    :TDateTime read FGraphDateTimeBegin write SetGraphDateTimeBegin;
+    property GraphDateTimeEnd      :TDateTime read FGraphDateTimeEnd write SetGraphDateTimeEnd;
+    //Точность сравнения нахлестывания задач
+    property GraphDrawDatePrecision :Boolean read FGraphDrawDatePrecision write SetGraphDrawDatePrecision;
+    // Цвета
+    property GridColor          :TColor read FGridColor write FGridColor;
     property BackgroundColor      :TColor read FBackgroundColor write FBackgroundColor;
 
     property VertexBasePointColor :TColor read FVertexBasePointColor write FVertexBasePointColor;
@@ -470,6 +495,7 @@ type
 
     property PopupMenuGridArea        : TPopupmenu read FPopupGridArea write FPopupGridArea;
     property PopupMenuLeftOutsetArea  : TPopupmenu read FPopupLeftOutsetArea write FPopupLeftOutsetArea;
+    property ImageList                : TImageList read FImageList write FImageList;
 
     // Переопределяемые свойства
     property OnEditingDone               : TNotifyEvent read FOnEditingDone write FOnEditingDone;
@@ -539,6 +565,7 @@ type
     procedure ScrollToBegin;
     procedure ScrollToBookmark;
     procedure ScrollToNow;
+    //Обновить сетку с учетом изменения масштаба дат
     procedure RefreshGraphMultiplicity;
 
     procedure SelectObjectRect(TopLeft, BottomRight: TGTFPoint; AllVertexInRect: Boolean);
@@ -720,6 +747,39 @@ begin
   Result.X:=TmpX;
 end;
 
+function ColorBright(Color: TColor; Percent: SmallInt): TColor;
+var
+  r, g, b: Byte;
+begin
+  if Percent<0 then
+  begin
+    Percent:=abs(Percent);
+    Color := ColorToRGB(Color);
+    r := GetRValue(Color);
+    g := GetGValue(Color);
+    b := GetBValue(Color);
+    r := r - muldiv(r, Percent, 100);
+    //процент% уменьшения яркости
+
+    g := g - muldiv(g, Percent, 100);
+    b := b - muldiv(b, Percent, 100);
+    result := RGB(r, g, b);
+  end
+  else begin
+    Color := ColorToRGB(Color);
+    r := GetRValue(Color);
+    g := GetGValue(Color);
+    b := GetBValue(Color);
+    r := r + muldiv(255 - r, Percent, 100);
+
+    //процент% увеличения яркости
+
+    g := g + muldiv(255 - g, Percent, 100);
+    b := b + muldiv(255 - b, Percent, 100);
+    result := RGB(r, g, b);
+  end;
+end;
+
 function ColorDarker(Color: TColor; Percent: Byte): TColor;
 var
   r, g, b: Byte;
@@ -846,18 +906,17 @@ begin
    dec(FUpdateCount);
    if FUpdateCount=0 then
    begin
-     FDoSecondDraw:=True;
+     FDoScrollToBookmark:=True;
      ActiveDocument.Rows.EndUpdate;
      ActiveDocument.Cols.EndUpdate;
 
      EndScreenUpdate(Parent.Handle,false);
      Invalidate;
-     //Refresh;
-     Application.ProcessMessages;
-     ScrollToBookmark;
-   end;
-   if FUpdateCount<0 then
+   end
+   else if FUpdateCount<0 then
+   begin
       FUpdateCount:=0;
+   end;
 end;
 
 procedure TGTFControl.ScrollToBegin;
@@ -868,20 +927,23 @@ end;
 
 procedure TGTFControl.ScrollToBookmark;
 var
-  iDX,iDY,i,y1,y2:integer;
+  iDX,iDY,i:integer;
   ColItem:TGTFCOutsetTreeColItem;
   RowItem:TGTFCOutsetTreeRowItem;
   bHorizontal,bVertical:Boolean;
 
   bScrollBarVerticalUpdate    : Boolean;
   bScrollBarHorizontalUpdate  : Boolean;
+  sVertIDBase,
+  sVertID                     : String;
 begin
+  FDoScrollToBookmark:=False;
   GetOutsetBorderSizes(Self);
 
-  bScrollBarVerticalUpdate    :=FScrollBarVerticalUpdate;
-  bScrollBarHorizontalUpdate  :=FScrollBarHorizontalUpdate;
-  FScrollBarVerticalUpdate   := True;
-  FScrollBarHorizontalUpdate := True;
+  bScrollBarVerticalUpdate    := FScrollBarVerticalUpdate;
+  bScrollBarHorizontalUpdate  := FScrollBarHorizontalUpdate;
+  FScrollBarVerticalUpdate    := True;
+  FScrollBarHorizontalUpdate  := True;
 
   bHorizontal :=False;
   bVertical   :=False;
@@ -898,28 +960,22 @@ begin
         iDX:=ColItem.BeginX;
         bHorizontal :=True;
     end;
-
   end;
 
   if ActiveDocument.ViewBookmark.VBookmark and not(varisnull(ActiveDocument.ViewBookmark.VBookmarkValue)) then
   begin
-
-  end;
-
-  for i:=0 to ActiveDocument.Rows.count-1 do
-  begin
-    if ActiveDocument.Rows.Items[i].GridIndex=ActiveDocument.Rows.EndItemCount-1 then
-    begin
-       RowItem :=TGTFCOutsetTreeRowItem(ActiveDocument.Rows.Items[i]);
-       y1      :=ActiveDocument.ViewPos.Y;
-       y2      :=RowItem.EndY;
-       if y1<0-y2 then
-       begin
-          iDY:=FTopOutsetBorderHeight;
-       end;
-
-       break;
-    end;
+      sVertIDBase:=ActiveDocument.ViewBookmark.VBookmarkValue;
+      for i:=0 to ActiveDocument.Rows.count-1 do
+      begin
+        RowItem :=TGTFCOutsetTreeRowItem(ActiveDocument.Rows.Items[i]);
+        sVertId:='TN:'+UpperCase(RowItem.DBTableName)+':ID:'+VarToStr(RowItem.DBRecordID);
+        if CompareText(sVertId,sVertIDBase)=0 then
+        begin
+           iDY         :=RowItem.BeginY;
+           bVertical   :=True;
+           break;
+        end;
+      end;
   end;
 
   if bHorizontal then
@@ -930,18 +986,18 @@ begin
     FScrollBarHorizontal.PageSize    :=vbpWidth-FLeftOutsetBorderWidth;
     FScrollBarHorizontal.SmallChange :=ColWidth;
     FScrollBarHorizontal.LargeChange :=vbpWidth-ColWidth;
-    iDX:=-1*ABS(iDX)+FLeftOutsetBorderWidth;
+    iDX:=FLeftOutsetBorderWidth-iDX;
   end;
 
   if bVertical then
   begin
     FScrollBarVertical.Min         :=0;
     FScrollBarVertical.Max         :=FRowHSizeSum;
-    FScrollBarVertical.Position    :=ABS(iDY);//-FTopOutsetBorderHeight
+    FScrollBarVertical.Position    :=ABS(iDY);
     FScrollBarVertical.PageSize    :=vbmHeight-FTopOutsetBorderHeight;
     FScrollBarVertical.SmallChange :=RowHeight;
     FScrollBarVertical.LargeChange :=vbmHeight-RowHeight;
-    iDY:=-1*ABS(iDY)+FTopOutsetBorderHeight;
+    iDY:=FTopOutsetBorderHeight-iDY;
   end;
 
   SetViewZeroPoint(iDX,iDY);
@@ -959,31 +1015,35 @@ end;
 
 procedure TGTFControl.RefreshGraphMultiplicity;
 begin
-  BeginUpdate;
-  RefreshColls;
-  EndUpdate;
+  FColNeedUpdateRange:=True;
+  Repaint;
 end;
 
 constructor TGTFControl.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FDocument                          :=nil;
-  FFirstPaint                        :=True;
   FDevelop                           :=False;//информация для разработчика
   FDrawRowCounter                    :=0;
+
+  FFirstPaint                        :=True;
   FUpdateCount                       :=0;
+  FColNeedUpdateRange                :=True;
+  FDoScrollToBookmark                :=False;
+
   FRowHSizeSum                       :=0;
   FColWSizeSum                       :=0;
   FDeltaCord                         :=6; //Размеры вершин при отрисовке
   FCursorDeltaSize                   :=0; //Дельта пикселей при кликах по полю
   GridScale                          :=100;
-  RowHeight                          :=26; //Высота строки
+  RowHeight                          :=24; //Высота строки
   ColWidth                           :=20; //Ширина столбца
   FLeftOutsetBorderRowNumWidth       :=0;
   FColExtWidth                       :=100;
   FLeftOutsetBorderWidth             :=100;
   FLeftOutsetBorderVCapWidth         :=24;
   FTopOutsetBorderHeight             :=50;
+  FDataAreaHeight                    :=0;
   FSelectStyle                       :=[aasoINSIDE]; //[aasoBASEPOINT]+[aasoVERTEX]+[aasoBORDER]+
   FSelectListStyle                   :=[];
   FSelectObjectFilter                :=[etAll];
@@ -1059,13 +1119,20 @@ begin
   FDrawLayerOutsetBorder            :=TBitMap.Create;
   FDrawLayerOutsetBorderCanvas      :=FDrawLayerOutsetBorder.Canvas;
 
-  FDrawLayerOutsetBorder.Transparent:=False;
-  //FDrawLayerOutsetBorder.TransparentMode:=tmFixed;
-  //FDrawLayerOutsetBorder.TransparentColor:=clFuchsia;
+  FTempDrawLayer                   :=TBitMap.Create;
+  FTempDrawLayerCanvas             :=FTempDrawLayer.Canvas;
 
   FDrawLayerMain.Transparent:=False;
   //FDrawLayerMain.TransparentMode:=tmFixed;
   //FDrawLayerMain.TransparentColor:=clFuchsia;
+
+  FDrawLayerOutsetBorder.Transparent:=False;
+  //FDrawLayerOutsetBorder.TransparentMode:=tmFixed;
+  //FDrawLayerOutsetBorder.TransparentColor:=clFuchsia;
+
+  FTempDrawLayer.Transparent:=False;
+  //FTempDrawLayer.TransparentMode:=tmFixed;
+  //FTempDrawLayer.TransparentColor:=clFuchsia;
 
   { При включенной прозрачности лагает отрисовка, появляются артефакты}
 
@@ -1101,20 +1168,21 @@ begin
   FFormWindowProc                   :=TCustomForm(AOwner).WindowProc;
   TCustomForm(AOwner).WindowProc    :=@SuperWndProc;//WindowProc
 
-    FSelfOnClick                     :=nil;
-    FPopupGridArea                   :=nil;
-    FPopupLeftOutsetArea             :=nil;
-    FSelfOnDblClick                  :=nil;
-    FSelfOnMouseDown                 :=nil;
-    //FSelfOnMouseEnter                :=nil;
-    //FSelfOnMouseLeave                :=nil;
-    FSelfOnMouseMove                 :=nil;
-    FSelfOnMouseUp                   :=nil;
-    FSelfOnMouseWheel                :=nil;
-    FSelfOnMouseWheelDown            :=nil;
-    FSelfOnMouseWheelUp              :=nil;
-    FSelfOnPaint                     :=nil;
-    FOnChangeGridScale               :=nil;
+  FSelfOnClick                     :=nil;
+  FPopupGridArea                   :=nil;
+  FPopupLeftOutsetArea             :=nil;
+  FImageList                       :=nil;
+  FSelfOnDblClick                  :=nil;
+  FSelfOnMouseDown                 :=nil;
+  //FSelfOnMouseEnter                :=nil;
+  //FSelfOnMouseLeave                :=nil;
+  FSelfOnMouseMove                 :=nil;
+  FSelfOnMouseUp                   :=nil;
+  FSelfOnMouseWheel                :=nil;
+  FSelfOnMouseWheelDown            :=nil;
+  FSelfOnMouseWheelUp              :=nil;
+  FSelfOnPaint                     :=nil;
+  FOnChangeGridScale               :=nil;
 
    //Блокируем штатную обработку свойств, чтобы обрабатывать самостоятельно
    inherited OnClick                 :=nil;//См.SuperClick;
@@ -1127,7 +1195,7 @@ begin
    inherited OnMouseWheel            :=@SuperMouseWheel;
    inherited OnMouseWheelDown        :=@SuperMouseWheelDown;
    inherited OnMouseWheelUp          :=@SuperMouseWheelUp;
-   inherited OnPaint                 :=@SuperPaint;
+   inherited OnPaint                 :=@SLControlPaintL1;
 
    FLogicalDraw.OnSetStyle           :=@SetStyleDraw;
    FLogicalDraw.OnSetFontStyle       :=@SetFontStyleDraw;
@@ -1143,6 +1211,7 @@ begin
    FLogicalDraw.OnPolygonDraw        :=@PolygonDraw;
    FLogicalDraw.OnRectangelDraw      :=@RectangelDraw;
    FLogicalDraw.OnFillDraw           :=@FillDraw;
+   FLogicalDraw.OnImageDraw          :=@ImageDraw;
    FLogicalDraw.OnGetGridScale       :=@GetGridScale;
    FLogicalDraw.OnGetTextWidth       :=@GetTextWidth;
    FLogicalDraw.OnGetTextHeight      :=@GetTextHeight;
@@ -1170,7 +1239,7 @@ begin
     ActiveDocument                     :=TGTFDrawDocument.Create(self);
     if Assigned(ActiveDocument)then
     begin
-         ActiveDocument.OnChange       :=@MainControlPaint;
+         ActiveDocument.OnChange       :=@SLControlPaintL2;
     end;
 
     ActiveDocument.FGridLineWidth        :=GridLineWidth;
@@ -1199,9 +1268,11 @@ begin
 
   FMessagesList.Free;
   FLogicalDraw.Free;
-  FDrawLayerMain.Free;
 
+  FDrawLayerMain.Free;
   FDrawLayerOutsetBorder.Free;
+  FTempDrawLayer.Free;
+
   FEntityFirstDrawBitMap.Free;
   FHintDrawBitMap.Free;
 
@@ -1323,6 +1394,14 @@ begin
     FVertexCustomColor                        :=clNavy;
     FBackgroundColor                          :=clWindow;
     FCursorColor                              :=clHighLight;
+
+    FBackgroundColorHL                        :=ColorLighter(clHighLight,95);
+    FBackgroundColorDayOff                    :=ColorDarker(BackgroundColor,10);
+    FBackgroundColorToDay                     :=ColorBright(clHighLight,15);
+    FBackgroundColorRowDisabled               :=ColorDarker(BackgroundColor,6);
+
+    FPenColorHL                               :=clHighLight;
+
     FDrawCursorStyle                          :=csOSAuto;
     FDefaultFont.Assign(Screen.SystemFont);
     FDefaultFont.Color                        :=not FBackgroundColor;
@@ -1391,17 +1470,20 @@ procedure TGTFControl.TreeObjectClickLeft(TopLeft, BottomRight: TGTFPoint);
 var
   i                :integer;
   Answer           :TGTFCOutsetTreeClickResult;
-  Item             :TGTFCOutsetTreeBasicItem;
+  Item             :TGTFCOutsetTreeRowItem;
 begin
   for I := 0 to ActiveDocument.Rows.Count - 1 do
   begin
-        Item:=ActiveDocument.Rows.Items[i];
-        Answer:=Item.GetClickResult(Point(TopLeft.X,TopLeft.Y),Point(BottomRight.X,BottomRight.Y));
-        if Answer<>tcrNone then
+        Item:=TGTFCOutsetTreeRowItem(ActiveDocument.Rows.Items[i]);
+        if (not item.RowParentFiltered) then
         begin
-          if Assigned(FOnOutsetTreeRowEvent) then
-             FOnOutsetTreeRowEvent(Self,Item,Answer);
-             break;
+          Answer:=Item.GetClickResult(Point(TopLeft.X,TopLeft.Y),Point(BottomRight.X,BottomRight.Y));
+          if Answer<>tcrNone then
+          begin
+            if Assigned(FOnOutsetTreeRowEvent) then
+               FOnOutsetTreeRowEvent(Self,Item,Answer);
+               break;
+          end;
         end;
   end;
 end;
@@ -1971,7 +2053,7 @@ begin
     end;
 
     gaMouseAction(self);
-    MainControlPaint(self);
+    SLControlPaintL2(self);
 
     if FClickCount>0 then
     begin
@@ -2054,7 +2136,6 @@ begin
             if j>0 then
             begin
               ColItem:=TGTFCOutsetTreeColItem(ActiveDocument.Cols.Items[j]);
-              //SetMessageToUser(DateTimeToStr(ColItem.BeginDate));
               vbPos:=ActiveDocument.ViewBookmark;
               vbPos.HBookmark        :=True;
               vbPos.HBookmarkValue   :=ColItem.BeginDate;
@@ -2066,10 +2147,9 @@ begin
             if j>0 then
             begin
               RowItem:=TGTFCOutsetTreeRowItem(ActiveDocument.Rows.Items[j]);
-              //SetMessageToUser(RowItem.Text);
               vbPos:=ActiveDocument.ViewBookmark;
               vbPos.VBookmark        :=True;
-              vbPos.VBookmarkValue   :=RowItem.DBRecordID;
+              vbPos.VBookmarkValue   :='TN:'+UpperCase(RowItem.DBTableName)+':ID:'+VarToStr(RowItem.DBRecordID);
               ActiveDocument.ViewBookmark := vbPos;
             end;
 
@@ -2078,7 +2158,6 @@ begin
         begin
             //Пересчитываем разницу смещения точек и отправляем значение на запись
             WCSMouseButtonDownPos       :=PointSCSToPointWCS(FMouseButtonDownPos.X,FMouseButtonDownPos.Y);
-            //WCSMousePosMoveVertexLast   :=PointSCSToPointWCS(FMousePosMoveVertexLast.X,FMousePosMoveVertexLast.Y);
             FMousePosMoveVertexDelta.X  :=WCSCursorPos.X-WCSMouseButtonDownPos.X;
             FMousePosMoveVertexDelta.Y  :=WCSCursorPos.Y-WCSMouseButtonDownPos.Y;
 
@@ -2137,11 +2216,11 @@ begin
       end;
   end;
   {
-    Если тут использовать Repaint; вместо MainControlPaint(self);, то
+    Если тут использовать Repaint; вместо SLControlPaintL2(self), то
     при работе через Удаленный рабочий стол Windows будет мерцание
     и большая задержка между отрисовками компонента
   }
-  MainControlPaint(self);
+  SLControlPaintL2(self);
 
   if Assigned(FSelfOnMouseMove) then
      FSelfOnMouseMove(Sender,Shift,X,Y);
@@ -2174,7 +2253,7 @@ begin
                 if ABS(j)+Height<FScrollBarVertical.Max then
                 begin
                   SetViewZeroPoint(ActiveDocument.ViewPos.X,j);
-                  MainControlPaint(Sender);
+                  SLControlPaintL2(Sender);
                 end;
           end
           else begin
@@ -2183,7 +2262,7 @@ begin
               if j+FTopOutsetBorderHeight>FScrollBarVertical.Min then
                    j:=FTopOutsetBorderHeight;
               SetViewZeroPoint(ActiveDocument.ViewPos.X,j);
-              MainControlPaint(Sender);
+              SLControlPaintL2(Sender);
           end;
 
           FClickCount:=0;
@@ -2202,7 +2281,7 @@ begin
     if GridScale>50 then
     begin
        GridScale:=GridScale-10;
-       MainControlPaint(Sender);
+       SLControlPaintL2(Sender);
     end;
   end
   else begin
@@ -2219,7 +2298,7 @@ begin
     if GridScale<150 then
     begin
        GridScale:=GridScale+10;
-       MainControlPaint(Sender);
+       SLControlPaintL2(Sender);
     end;
   end
   else begin
@@ -2228,15 +2307,18 @@ begin
   end;
 end;
 
-procedure TGTFControl.SuperPaint(Sender: TObject);
+procedure TGTFControl.SLControlPaintL1(Sender: TObject);
 begin
+  //Происходит только при манипуляциях с формой
+  if FUpdateCount>0 then
+     exit;
 
-  if FFirstPaint then
+  if FColNeedUpdateRange then
   begin
     RefreshColls;
   end;
 
-  MainControlPaint(self);
+  SLControlPaintL2(self);
 
   if FFirstPaint then
   begin
@@ -2245,9 +2327,6 @@ begin
        FOnFirstShowEvent(Self);
 
      ScrollToBegin;
-  end
-  else begin
-     //ScrollToBookmark;
   end;
 
   if Assigned(FSelfOnPaint) then
@@ -2279,14 +2358,15 @@ procedure TGTFControl.SLFrameViewModePaint(Sender: TObject);
 var
   PosX, PosY,
   PenWidth,
-  TextWidth  :integer;
+  iTextHeight,
+  iTextWidth  :integer;
 begin
    if FFrameViewModeText='' then exit;
 
    FDrawLayerMainCanvas.Pen.Style     :=psSolid;
    FDrawLayerMainCanvas.Pen.Color     :=FFrameViewModeColor;
    FDrawLayerMainCanvas.Pen.Mode      :=pmCopy;
-   PenWidth                     :=FDrawLayerMainCanvas.Pen.Width;
+   PenWidth                           :=FDrawLayerMainCanvas.Pen.Width;
    FDrawLayerMainCanvas.Pen.Width     :=5;
 
    FDrawLayerMainCanvas.Brush.Color   :=FFrameViewModeColor;
@@ -2297,11 +2377,14 @@ begin
    FDrawLayerMainCanvas.Font.Bold     :=True;
    FDrawLayerMainCanvas.Font.Color    :=FBackgroundColor;
 
+   iTextWidth:=FDrawLayerMainCanvas.GetTextWidth(FFrameViewModeText)+25;
+   iTextHeight:=FDrawLayerMainCanvas.GetTextHeight(FFrameViewModeText)+4;
+
    FDrawLayerMainCanvas.Frame(0,0,Width,Height);
    PosX:=10;
-   PosY:=5;
-   TextWidth:=FDrawLayerMainCanvas.GetTextWidth(FFrameViewModeText)+25;
-   FDrawLayerMainCanvas.FillRect(0,0,TextWidth,25);
+   PosY:=2;
+
+   FDrawLayerMainCanvas.FillRect(0,0,iTextWidth,iTextHeight);
    FDrawLayerMainCanvas.TextOut(PosX,PosY,FFrameViewModeText);
    FDrawLayerMainCanvas.Pen.Width     :=PenWidth;
 end;
@@ -2362,31 +2445,22 @@ var
   PosX, PosY,
   PosX1, PosY1,
   PosX2, PosY2,
-  PenWidth:integer;
-  RowItem:TGTFCOutsetTreeRowItem;
-  ColItem:TGTFCOutsetTreeColItem;
-  bFill:Boolean;
-  bColEnabled:Boolean;
-  TmpColorDayOff,
-  TmpColorToDay,
-  TmpColorRowDisabled,
-  TmpColorHL:TColor;
-  CurH,CurV:TRect;
+  PenWidth            :integer;
+  RowItem             :TGTFCOutsetTreeRowItem;
+  ColItem             :TGTFCOutsetTreeColItem;
+  bFill               :Boolean;
+  bColEnabled         :Boolean;
+  CurH,CurV           :TRect;
 begin
 
    PenWidth                     :=FDrawLayerMainCanvas.Pen.Width;
 
-   TmpColorHL                   :=ColorLighter(clHighLight,95);
-   TmpColorDayOff               :=ColorDarker(BackgroundColor,6);
-   TmpColorToDay                :=ColorLighter(clGreen,95);
-   TmpColorRowDisabled          :=ColorDarker(BackgroundColor,10);
-
-   FDrawLayerMainCanvas.Brush.Color   :=TmpColorHL;
+   FDrawLayerMainCanvas.Brush.Color   :=FBackgroundColorHL;
    FDrawLayerMainCanvas.Brush.Style   :=bsSolid;
 
    //Разлиновка
    FDrawLayerMainCanvas.Pen.Style     :=psSolid;
-   FDrawLayerMainCanvas.Pen.Color     :=clHighLight;
+   FDrawLayerMainCanvas.Pen.Color     :=FPenColorHL;
    //FDrawLayerMainCanvas.Pen.Mode      :=pmCopy;
    FDrawLayerMainCanvas.Pen.Width     :=1;
 
@@ -2397,6 +2471,9 @@ begin
    PosX                         :=ActiveDocument.FViewPos.X;
    PosY                         :=ActiveDocument.FViewPos.Y;
 
+   //if PosX>FLeftOutsetBorderWidth then
+   //   PosX:=FLeftOutsetBorderWidth;
+
    CurV.Empty;
    CurH.Empty;
 
@@ -2406,14 +2483,13 @@ begin
          RowItem:=TGTFCOutsetTreeRowItem(ActiveDocument.Rows.Items[i]);
 
          if ((not RowItem.RowFiltered)
-            or((RowItem.RowFiltered)and(not RowItem.RowParentFiltered)))
-            and (not RowItem.Separator) then
+            or((RowItem.RowFiltered)and(not RowItem.RowParentFiltered))) then
          begin
              bFill:=False;
 
              if (not RowItem.RowEnabled) then
              begin
-                FDrawLayerMainCanvas.Brush.Color   :=TmpColorRowDisabled;
+                FDrawLayerMainCanvas.Brush.Color   :=FBackgroundColorRowDisabled;
 
                 PosY1   :=RowItem.BeginY+PosY;
                 PosY2   :=RowItem.EndY+PosY;
@@ -2447,7 +2523,7 @@ begin
         //аналог SLCursorPaint
         //DrawHighLightFrame(FDrawLayerMainCanvas,0,PosY1,vbpWidth,PosY2);
 
-        FDrawLayerMainCanvas.Brush.Color   :=TmpColorHL;
+        FDrawLayerMainCanvas.Brush.Color   :=FBackgroundColorHL;
          if (not CurH.IsEmpty) then
          begin
            FDrawLayerMainCanvas.FillRect(CurH);
@@ -2500,14 +2576,14 @@ begin
          if not bColEnabled then
          begin
             bFill:=True;
-            FDrawLayerMainCanvas.Brush.Color :=TmpColorDayOff;
+            FDrawLayerMainCanvas.Brush.Color :=FBackgroundColorDayOff;
          end;
 
          if (bColEnabled)and(GraphMultiplicity in [gmHour]) then
          begin
             if DateUtils.CompareDate(ColItem.BeginDate,Today)=0 then
             begin
-               FDrawLayerMainCanvas.Brush.Color   :=TmpColorToDay;
+               FDrawLayerMainCanvas.Brush.Color   :=FBackgroundColorToDay;
                bFill:=True;
             end;
          end;
@@ -2595,7 +2671,10 @@ begin
 
    FDrawLayerMainCanvas.Brush.Style   :=bsClear;//Прозрачный текст
    iColWidth                    :=ColWidth;
+
    PosX                         :=ActiveDocument.FViewPos.X;
+   //if PosX>FLeftOutsetBorderWidth then
+   //   PosX:=FLeftOutsetBorderWidth;
 
    for i:=0 to ActiveDocument.Cols.Count-1 do
    begin
@@ -2614,23 +2693,24 @@ begin
 
    //iRowHeight                   :=RowHeight;
    PosY                         :=ActiveDocument.FViewPos.Y;
+   PosY2                        :=PosY;
+   FDataAreaHeight              :=0;
    //j                            :=ActiveDocument.Rows.LevelCount-1;
    for i:=0 to ActiveDocument.Rows.Count-1 do
    begin
        RowItem:=TGTFCOutsetTreeRowItem(ActiveDocument.Rows.Items[i]);
-       //if (RowItem.Level=j)or((not RowItem.Separator)and(FShowGroupHorizontal))  then
-       //begin
          if ((RowItem.BeginY<>RowItem.EndY)and
             ((not RowItem.RowFiltered)or
-            ((RowItem.RowFiltered)and(not RowItem.RowParentFiltered))))
-            and(not RowItem.Separator) then
+            ((RowItem.RowFiltered)and(not RowItem.RowParentFiltered)))) then
          begin
            PosY1        :=RowItem.BeginY+PosY-GridLineWidth;
            PosY2        :=RowItem.EndY+PosY+GridLineWidth;
            FDrawLayerMainCanvas.Rectangle(0,PosY1,vbpWidth,PosY2);
+           if PosY2>FDataAreaHeight then
+              FDataAreaHeight:=PosY2;
          end;
-       //end;
    end;
+   FDataAreaHeight:=FDataAreaHeight-ActiveDocument.FViewPos.Y+FTopOutsetBorderHeight;
 
    FDrawLayerMainCanvas.Pen.Width     :=PenWidth;
 end;
@@ -2671,7 +2751,7 @@ begin
   w:=ACanvas.Pen.Width;
 
   ACanvas.Pen.Width := 1;
-  ACanvas.Pen.Color   :=clHighLight;
+  ACanvas.Pen.Color   :=FPenColorHL;
   ACanvas.Pen.Style   :=psSolid;
   ACanvas.Frame(AX1,AY1,AX2,AY2);
 
@@ -2688,6 +2768,7 @@ var
   bDoWayLine              :Boolean;
   TextHeight,
   j,arLength,
+  iTextAlignX,
   iRowHeight,
   //iRowUnderCursor,
   PosX3, PosX4,
@@ -2699,6 +2780,9 @@ var
   clTemp                  :TColor;
   bsTemp                  :TBrushStyle;
 begin
+   iTextAlignX:=0;
+   iTextAlignX:=((FLeftOutsetBorderVCapWidth+GridLineWidth)*(ActiveDocument.Rows.LevelCount-1));
+
             {
             iRowUnderCursor :=ActiveDocument.GetRowUnderCursor;
             if iRowUnderCursor>-1 then
@@ -2766,11 +2850,15 @@ begin
                  DrawHighLightFrame(ACanvas,PosX1,PosY1,PosX2,PosY2);
              end;
 
-             //Текст строки
-             if not RowItem1.Separator then
+             //todo: on/off align text
+             //Выравнивание начала написания текста по вертикали
+             if (iTextAlignX>PosX1b)and(RowItem1.ChildCount=0) then
              begin
-                ACanvas.TextRect(Rect(PosX1b,PosY1,PosX2,PosY2),PosX1b+5,PosY1+(iRowHeight div 2)-(TextHeight div 2),sText);
+               PosX1b:=iTextAlignX;
              end;
+
+             //Текст строки
+             ACanvas.TextRect(Rect(PosX1b,PosY1,PosX2,PosY2),PosX1b+5,PosY1+(iRowHeight div 2)-(TextHeight div 2),sText);
 
              PosX3 := PosX2;
              PosX4 := PosX2;
@@ -2846,6 +2934,7 @@ var
   RowItem1                :TGTFCOutsetTreeRowItem;
   TextWidth,
   TextHeight,
+  PosXText,
   PosX1, PosY1,
   PosX2, PosY2            :Integer;
   sText                   :ShortString;
@@ -2858,12 +2947,12 @@ begin
              PosX2    :=AX2;
              PosY2    :=AY2;
 
-             //bDrawGroupHoriz:=ADrawGroupHoriz;
-
              sText          :=RowItem1.Text;
              //sText2         :=IntToStr(RowItem1.GridIndex+1);  //'|'+
              TextWidth      :=ACanvas.GetTextWidth(sText);
              TextHeight     :=ACanvas.GetTextHeight(sText);
+
+             PosXText:=PosX1-1+((PosX2-PosX1)div 2)-(TextHeight div 2);
 
              if FShowGroupHorizontal then
              begin
@@ -2888,8 +2977,6 @@ begin
              end
              else
              begin
-               if not RowItem1.Separator then
-               begin
                   //Затемнение фона вертикального отделителя группы
                   clTemp:=ACanvas.Brush.Color;
                   bsTemp:=ACanvas.Brush.Style;
@@ -2901,24 +2988,7 @@ begin
 
                   ACanvas.Brush.Color   :=clTemp;
                   ACanvas.Brush.Style   :=bsTemp;
-
-                  //Линии
-                  //ACanvas.Line(PosX1,PosY1,PosX1,PosY2); //левый
-
-                  //if bDrawGroupHoriz then
-                  //   ACanvas.Line(PosX2,PosY1+RowItem1.Height,PosX2,PosY2) //правый
-                  //else
-                  //   ACanvas.Line(PosX2,PosY1,PosX2,PosY2);
-
-                  //ACanvas.Line(PosX1,PosY2,PosX2-1,PosY2-1);  //нижний
-               end
-               else begin
-                  //ACanvas.Line(PosX1,PosY2,PosX2,PosY2);
-               end;
              end;
-
-             if not RowItem1.Separator then
-             begin
 
               ACanvas.Font.Orientation:=0;
 
@@ -2947,23 +3017,18 @@ begin
                  end;
 
                end;
-
-             end;
-
              if not RowItem1.RowFiltered then
              begin
-               if (TextWidth+RowItem1.Height)>(PosY2-PosY1) then
+               if (TextWidth+RowItem1.Height)>(PosY2-PosY1-1) then
                begin
                    //Если не помещается по высоте
                    ACanvas.Font.Orientation:=900;
-                   if not RowItem1.Separator then
-                   ACanvas.TextRect(Rect(PosX1,PosY1+2+RowItem1.Height,PosX2,PosY2),PosX1+(TextHeight div 2),PosY2-5,sText);
+                   ACanvas.TextRect(Rect(PosX1,PosY1+2+RowItem1.Height,PosX2,PosY2-5),PosXText,PosY2-5,sText);
                    ACanvas.Font.Orientation:=0;
                end
                else begin
                    ACanvas.Font.Orientation:=900;
-                   if not RowItem1.Separator then
-                   ACanvas.TextRect(Rect(PosX1,PosY1+RowItem1.Height,PosX2,PosY2+RowItem1.Height),PosX1+(TextHeight div 2),PosY1+(TextWidth)+RowItem1.Height+5,sText);
+                   ACanvas.TextRect(Rect(PosX1,PosY1+RowItem1.Height,PosX2,PosY2+RowItem1.Height),PosXText,PosY1+(TextWidth)+RowItem1.Height+5,sText);
                    ACanvas.Font.Orientation:=0;
                end;
              end;
@@ -3015,10 +3080,7 @@ begin
 
           if FShowGroupHorizontal then  {создание горизонтальной строки группы}
           begin
-             if RowItem1.Separator then
-                bDrawGroupHoriz:=False
-             else
-                bDrawGroupHoriz:=True;
+             bDrawGroupHoriz:=True;
           end
           else begin
              bDrawGroupHoriz:=False;
@@ -3109,6 +3171,7 @@ var
   bItem2Exists           :Boolean;
 
   TmpCanvas              :TCanvas;
+  clTmp                  :TColor;
   //bWayLine               :boolean;
 begin
    ///Сверху
@@ -3121,7 +3184,11 @@ begin
    TmpCanvas.Brush.Style        :=bsClear;//Прозрачный текст
    iColWidth                    :=ColWidth;
    iColHeight                   :=FTopOutsetBorderHeight div (iLevelCount);
+
    PosX                         :=ActiveDocument.FViewPos.X;
+   //if PosX>FLeftOutsetBorderWidth then
+   //   PosX:=FLeftOutsetBorderWidth;
+
    PosY1                        :=0;
    PosY2                        :=PosY1+iColHeight+GridLineWidth;
 
@@ -3144,12 +3211,18 @@ begin
                PosX1:=PosX-GridLineWidth;
                PosX2:=PosX+iColWidth+GridLineWidth;
 
-               TGTFCOutsetTreeColItem(ColItem2).BeginX :=PosX1+GridLineWidth-ActiveDocument.FViewPos.X;
-               TGTFCOutsetTreeColItem(ColItem2).EndX   :=PosX2-GridLineWidth-ActiveDocument.FViewPos.X;
+               TGTFCOutsetTreeColItem(ColItem2).BeginX :=(PosX1+GridLineWidth-ActiveDocument.FViewPos.X);
+               TGTFCOutsetTreeColItem(ColItem2).EndX   :=(PosX2-GridLineWidth-ActiveDocument.FViewPos.X);
 
                if (CompareDateTime(Now,TGTFCOutsetTreeColItem(ColItem2).BeginDate)>=0)and(CompareDateTime(Now,TGTFCOutsetTreeColItem(ColItem2).EndDate)<=0) then
                begin
                   TmpCanvas.Font.Bold   :=True;
+                  if (DayOf(TGTFCOutsetTreeColItem(ColItem2).BeginDate)=16)and((MonthOf(TGTFCOutsetTreeColItem(ColItem2).BeginDate)=12)) then
+                  begin
+                    //In memory of my mother
+                    clTmp:=TmpCanvas.Font.Color;
+                    TmpCanvas.Font.Color := $007A0E7A;
+                  end;
                end
                else begin
                   TmpCanvas.Font.Bold   :=False;
@@ -3160,10 +3233,16 @@ begin
                   GroupPosX1:=PosX1;
                   bItem2Exists:=True;
                end;
-               GroupPosX2:=PosX2;
+               GroupPosX2 :=PosX2;
                TextHeight :=TmpCanvas.GetTextHeight(sText);
                TmpCanvas.Rectangle(PosX1,PosY2-1,PosX2,FTopOutsetBorderHeight+1);
                TmpCanvas.TextRect(Rect(PosX1,PosY2,PosX2,FTopOutsetBorderHeight),PosX1+(iColWidth div 2)-(TextWidth div 2),PosY2+(iColHeight div 2)-(TextHeight div 2),sText);
+
+
+               if TmpCanvas.Font.Color=$007A0E7A then
+               begin
+                  TmpCanvas.Font.Color := clTmp;
+               end;
 
                {
                //Подсветка столба
@@ -3181,8 +3260,8 @@ begin
          //Чертим заголовок группы
          if bItem2Exists then
          begin
-            TGTFCOutsetTreeColItem(ColItem1).BeginX :=GroupPosX1+GridLineWidth-ActiveDocument.FViewPos.X;
-            TGTFCOutsetTreeColItem(ColItem1).EndX   :=GroupPosX2-GridLineWidth-ActiveDocument.FViewPos.X;
+            TGTFCOutsetTreeColItem(ColItem1).BeginX :=(GroupPosX1+GridLineWidth-ActiveDocument.FViewPos.X);
+            TGTFCOutsetTreeColItem(ColItem1).EndX   :=(GroupPosX2-GridLineWidth-ActiveDocument.FViewPos.X);
 
             sText:=ColItem1.Text;
             TextWidth :=TmpCanvas.GetTextWidth(sText);
@@ -3224,6 +3303,33 @@ begin
      if ActiveDocument.ExtColumns.Items[i].Visible then
         Inc(Result);
   end;
+end;
+
+procedure TGTFControl.SetGraphDateTimeBegin(AValue: TDateTime);
+begin
+  if FGraphDateTimeBegin=AValue then Exit;
+  FGraphDateTimeBegin:=AValue;
+  //Update after RefreshGraphMultiplicity;
+end;
+
+procedure TGTFControl.SetGraphDateTimeEnd(AValue: TDateTime);
+begin
+  if FGraphDateTimeEnd=AValue then Exit;
+  FGraphDateTimeEnd:=AValue;
+  //Update after RefreshGraphMultiplicity;
+end;
+
+procedure TGTFControl.SetGraphDrawDatePrecision(AValue: Boolean);
+begin
+  if FGraphDrawDatePrecision=AValue then Exit;
+  FGraphDrawDatePrecision:=AValue;
+end;
+
+procedure TGTFControl.SetGraphMultiplicity(AValue: TGraphMultiplicity);
+begin
+  if FGraphMultiplicity=AValue then Exit;
+  FGraphMultiplicity:=AValue;
+  //Update after RefreshGraphMultiplicity;
 end;
 
 procedure TGTFControl.SetTreeButtonStyle(AValue: TGraphTreeButtonStyle);
@@ -3598,16 +3704,20 @@ end;
 
 procedure TGTFControl.RefreshColls;
 var
-  i:integer;
+  i          :integer;
   BeginDate,
   LastDate,
   CurDate,
-  EndDate:TDateTime;
-  Item1,Item2:TGTFCOutsetTreeColItem;
+  EndDate    :TDateTime;
+  Item1,
+  Item2      :TGTFCOutsetTreeColItem;
 begin
 
   BeginDate := GraphDateTimeBegin;
   EndDate   := GraphDateTimeEnd;
+
+  ActiveDocument.ColDateTimeBegin :=BeginDate;
+  ActiveDocument.ColDateTimeEnd   :=EndDate;
 
   try
       ActiveDocument.Cols.BeginUpdate;
@@ -3747,6 +3857,7 @@ begin
 
   finally
    ActiveDocument.Cols.EndUpdate;
+   FColNeedUpdateRange:=False;
   end;
 
 end;
@@ -3778,7 +3889,7 @@ begin
                   DrawObject :=False;
                end
                else begin
-                   if ItemTask.GridRow.RowFiltered then
+                   if (ItemTask.GridRow.RowDataHide) then
                    begin
                       DrawObject :=False;
                    end
@@ -4030,33 +4141,33 @@ end;
 function TGTFControl.ValgaColorToValColor(X:TgaColor):TColor;
 begin
   case x of
-    0  : Result:=clWindowText; //clWindowText
-    1  : Result:=clWindow; //clWindow
-    2  : Result:=clBtnFace; //clBtnFace
-    3  : Result:=clHighlight; //clHiglight
+    0  : Result:=clWindowText;    //clWindowText
+    1  : Result:=clWindow;        //clWindow
+    2  : Result:=clBtnFace;       //clBtnFace
+    3  : Result:=clHighlight;     //clHiglight
     4  : Result:=clHighlightText; //HighlightText
     5  : Result:=RGB(0,0,0); //Резерв
     6  : Result:=RGB(0,0,0); //Резерв
     7  : Result:=RGB(0,0,0); //Резерв
-    8  : Result:=RGB(0,0,0); //Резерв
+    8  : Result:=RGB(42,42,42); //Черный-серый
     9  : Result:=RGB(0,0,0); //Фиксированный Черный
     10  : Result:=RGB(132,132,132); //Фиксированный
     11  : Result:=RGB(173,173,173); //Фиксированный
     12  : Result:=RGB(214,214,214); //Фиксированный
     13  : Result:=RGB(240,240,240); //Фиксированный
     14  : Result:=RGB(255,255,255); //Фиксированный Белый
-    15  : Result:=RGB(229,63,44); //Приоритет: Важно+Срочно
+    15  : Result:=RGB(229,63,44);  //Приоритет: Важно+Срочно
     16  : Result:=RGB(254,172,49); //Приоритет: Важно
     17  : Result:=RGB(255,112,67); //Приоритет: Срочно
-    18  : Result:=RGB(39,202,55); //Приоритет: Нет, Нет
+    18  : Result:=RGB(39,202,55);  //Приоритет: Нет, Нет
     19  : Result:=RGB(146,194,154); //Статус: Завершено
     20  : Result:=RGB(118,230,44); //Статус: Выполнено
-    21  : Result:=RGB(0,255,43); //Статус: В работе
+    21  : Result:=RGB(0,255,43);   //Статус: В работе
     22  : Result:=RGB(254,172,49); //Статус: Приостановлено
     23  : Result:=RGB(127,191,255); //Статус: Новая задача
-    24  : Result:=RGB(0,0,0); //Резерв
-    25  : Result:=RGB(138,125,179); //Резерв
-    26  : Result:=RGB(0,0,0); //Резерв
+    24  : Result:=RGB(229,63,44); //Фиксированный
+    25  : Result:=RGB(138,125,179); //Фиксированный
+    26  : Result:=RGB(48,64,110); //Фиксированный
     27  : Result:=RGB(0,0,0); //Резерв
     28  : Result:=RGB(0,0,0); //Резерв
     29  : Result:=RGB(0,0,0); //Резерв
@@ -4123,6 +4234,9 @@ procedure TGTFControl.SLVirtualPaintBegin(Sender: TObject);
 var
   h:integer;
 begin
+
+  if ActiveDocument.FViewPos.X>FLeftOutsetBorderWidth then
+     ActiveDocument.FViewPos.X:=FLeftOutsetBorderWidth;
 
   if FDataBitMapEnabled then
   begin
@@ -4194,7 +4308,7 @@ begin
       else
          RowItem1.Height:=RowHeight;
 
-      if (RowItem1.Level=j)or((FShowGroupHorizontal)and(not RowItem1.Separator)) then
+      if (RowItem1.Level=j)or((FShowGroupHorizontal)) then
       begin
          FRowHSizeSum:=FRowHSizeSum+RowItem1.Height+GridLineWidth;
       end;
@@ -4443,7 +4557,7 @@ begin
    for i:=0 to ActiveDocument.Rows.Count-1 do
    begin
       RowItem1:=TGTFCOutsetTreeRowItem(ActiveDocument.Rows.Items[i]);
-      if (RowItem1.Level=j)or((FShowGroupHorizontal)and(not RowItem1.Separator)) then
+      if (RowItem1.Level=j)or((FShowGroupHorizontal)) then
          inc(Result);
    end;
 end;
@@ -4469,9 +4583,11 @@ end;
 function TGTFControl.GetRowHeight: Integer;
 var
   x:real;
+  iRH:Integer;
 begin
+  iRH:=Application.MainForm.Scale96ToScreen(FRowHeight);
   x:=FGridScale / 100;
-  Result:=Trunc(FRowHeight*x);
+  Result:=Trunc(iRH*x);
 end;
 
 procedure TGTFControl.SLVirtualPaintEnd(Sender: TObject);
@@ -4480,9 +4596,10 @@ var
 begin
   //Рисуем объекты
   RefreshEntityDraw;
-
+  //Вывод верхней панели календаря
   PicRect := Rect(0, 0, FDrawLayerMain.Width, FTopOutsetBorderHeight);
   FDrawLayerMainCanvas.CopyRect(PicRect,FDrawLayerOutsetBorder.Canvas,PicRect); //Вывод на канву
+  //Вывод левого боковика
   PicRect := Rect(0, 0, FLeftOutsetBorderWidth, FDrawLayerMain.Height);
   FDrawLayerMainCanvas.CopyRect(PicRect,FDrawLayerOutsetBorder.Canvas,PicRect); //Вывод на канву
 
@@ -4532,10 +4649,12 @@ begin
 end;
 
 //Все рисование начинается здесь
-procedure TGTFControl.MainControlPaint(Sender: TObject);
+procedure TGTFControl.SLControlPaintL2(Sender: TObject);
 begin
   if FUpdateCount>0 then
      exit;
+
+  //FDataBitMapEnabled use for export to file
 
   if FDataBitMapEnabled then
   begin
@@ -4581,6 +4700,9 @@ begin
 
   SLOutsetGridPaint(Sender);  //Сетка
 
+  if (FDoScrollToBookmark) then
+     ScrollToBookmark;
+
   SLVirtualPaintEnd(Sender); //Отрисовка Объектов чертежа
 
   ZeroPointCSPaint;  // Отрисовка нулевой точки
@@ -4591,16 +4713,16 @@ begin
 
   if FDataBitMapEnabled then
   begin
-     FDataBitMap.Assign(FDrawLayerMain);
+     FDataBitMap.Clear;
+     //Копируем буфер с подрезкой под видимые строки
+     FDataBitMap.SetSize(FDrawLayerMain.Width,FDataAreaHeight);
+     FDataBitMap.Canvas.Draw(0,0,FDrawLayerMain);
      ActiveDocument.FViewPos.X:=FDataBitMapTmpX;
      ActiveDocument.FViewPos.Y:=FDataBitMapTmpY;
-  end
-  else begin
-     FDataBitMap.Clear;
   end;
 
-     SLDevelopInfoPaint(Sender);
-     SLExtHintPaint(Sender);
+  SLDevelopInfoPaint(Sender);
+  SLExtHintPaint(Sender);
 
   if (not FDataBitMapEnabled)and(not FFirstPaint) then
   begin
@@ -4610,7 +4732,7 @@ begin
   end
   else if FFirstPaint then
   begin
-    Repaint;
+     //
   end;
 
 end;
@@ -4643,7 +4765,7 @@ begin
   begin
     k:=-1*(FScrollBarVertical.Position)+FTopOutsetBorderHeight;
     SetViewZeroPoint(ActiveDocument.ViewPos.X,k);
-    MainControlPaint(FScrollBarVertical);
+    SLControlPaintL2(FScrollBarVertical);
   end;
 end;
 
@@ -4656,7 +4778,7 @@ begin
   begin
     k:=-1*(FScrollBarHorizontal.Position)+FLeftOutsetBorderWidth;
     SetViewZeroPoint(k,ActiveDocument.ViewPos.Y);
-    MainControlPaint(FScrollBarHorizontal);
+    SLControlPaintL2(FScrollBarHorizontal);
   end;
 end;
 
@@ -4708,11 +4830,11 @@ begin
                     PosX:=FLeftOutsetBorderWidth;
                  end;
                      FDrawLayerMainCanvas.Font.Assign(FDefaultFont);
-                     FDrawLayerMainCanvas.Brush.Color :=FCursorColor;
+                     FDrawLayerMainCanvas.Brush.Color :=FBackgroundColorToDay;
                      FDrawLayerMainCanvas.Brush.Style :=bsSolid;
                      //
                      FDrawLayerMainCanvas.Pen.Style   :=psSolid;
-                     FDrawLayerMainCanvas.Pen.Color   :=FCursorColor;
+                     FDrawLayerMainCanvas.Pen.Color   :=FBackgroundColorToDay;
                      FDrawLayerMainCanvas.Pen.Mode    :=pmCopy;
 
 		     FDrawLayerMainCanvas.Pen.Width   :=2;
@@ -4730,8 +4852,8 @@ begin
    begin
        //Рамка вокруг даты под курсором
        e:=2;
-       FDrawLayerMainCanvas.Brush.Color :=ColorLighter(clHighLight,1);
-       FDrawLayerMainCanvas.Pen.Color   :=FDrawLayerMainCanvas.Brush.Color;
+       FDrawLayerMainCanvas.Brush.Color :=FBackgroundColorHL;
+       FDrawLayerMainCanvas.Pen.Color   :=FPenColorHL;
 
        i:=ActiveDocument.GetColUnderCursor;
        if (i>-1)and(i<ActiveDocument.Cols.Count) then
@@ -4802,7 +4924,9 @@ begin
       begin
       //DevString:=DevString+'  Scale:'+floattostr(ActiveDocument.FViewScale);
       //DevString:=DevString+'  ScaleK:'+inttostr(ActiveDocument.FViewScaleK);
-      DevString:=DevString+'  ViewPos+ X:'+floattostr(ActiveDocument.FViewPos.X)+' Y:'+floattostr(ActiveDocument.FViewPos.Y);
+      //DevString:=DevString+'  ViewPos+ X:'+floattostr(ActiveDocument.FViewPos.X)+' Y:'+floattostr(ActiveDocument.FViewPos.Y);
+
+      DevString:=DevString+'  Bookmark X:'+datetostr(ActiveDocument.FViewBookmark.HBookmarkValue);
 
       DevString:=DevString+'  IndexCellPos+ C:'+inttostr(ActiveDocument.GetColUnderCursor)+' R:'+inttostr(ActiveDocument.GetRowUnderCursor);
 
@@ -5050,7 +5174,7 @@ begin
     i:=ValWCSToValSCS(FontSize);
     if i>0 then
     begin
-      FDrawFont                   :=True;
+      FDrawFont                         :=True;
       FDrawLayerMainCanvas.Font.Size    :=i;
       FDrawLayerMainCanvas.Font.Style   :=FontStyle;
       FDrawLayerMainCanvas.Font.Name    :=FontName;
@@ -5100,10 +5224,6 @@ begin
 end;
 
 {
-
-type
-  TPointArr = array of TPoint;
-
 // Вспомогательная функция: вычисление базисной функции B-сплайна
 function Basis(i, k: Integer; t: Double; const Knots: array of Double): Double;
 var
@@ -5129,7 +5249,7 @@ begin
 end;
 
 // Основная процедура рисования B-сплайна
-procedure DrawBSpline(Points: TPointArr; Canvas: TCanvas; StepsPerSegment: Integer = 20);
+procedure DrawBSpline(Points: TArrayPoint; Canvas: TCanvas; StepsPerSegment: Integer = 20);
 var
   i, j, n, k: Integer;
   t, step: Double;
@@ -5167,9 +5287,7 @@ begin
       t := t + step;
     end;
   end;
-end;
-
-}
+end; }
 
 procedure DrawSpline(AX1, AY1, AX2, AY2, AX3, AY3, AX4, AY4: Integer; ACanvas: TCanvas);
 var
@@ -5203,8 +5321,9 @@ end;
 procedure TGTFControl.LineSDraw(APoints: array of TPoint);
 var
   i:integer;
-  arPoints:Array of TPoint;
+  arPoints:TArrayPoint;
 begin
+  //todo: splineb
   arPoints:=[];
   i:=Length(APoints);
   SetLength(arPoints,i);
@@ -5212,9 +5331,25 @@ begin
   begin
       arPoints[i]:=PointWCSToPointSCS(APoints[i].X,APoints[i].Y);
   end;
+  i:=Length(APoints)-1;
   DrawSpline(arPoints[0].X,arPoints[0].Y,arPoints[1].X,
-  arPoints[1].Y,arPoints[2].X,arPoints[2].Y,
-  arPoints[3].X,arPoints[3].Y,FDrawLayerMainCanvas);
+  arPoints[1].Y,arPoints[i-1].X,arPoints[i-1].Y,
+  arPoints[i].X,arPoints[i].Y,FDrawLayerMainCanvas);
+  {DrawBSpline(arPoints, FDrawLayerMainCanvas, 20);}
+end;
+
+procedure TGTFControl.ImageDraw(X, Y: Integer; AIndex: Smallint);
+var
+  PointSCS:TPoint;
+begin
+  if Assigned(FImageList) then
+  begin
+     PointSCS:=PointWCSToPointSCS(X,Y);
+     FImageList.GetBitmap(AIndex,FTempDrawLayer);
+     PointSCS.X:=PointSCS.X-(FTempDrawLayer.Width div 2);
+     PointSCS.Y:=PointSCS.Y-(FTempDrawLayer.Height div 2);
+     FDrawLayerMainCanvas.Draw(PointSCS.X,PointSCS.Y,FTempDrawLayer);
+  end;
 end;
 
 procedure TGTFControl.PolygonDraw(APoints: array of TPoint);
@@ -5322,75 +5457,29 @@ procedure TGTFControl.TextDraw(X0, Y0, AWidth, AHeight: Integer;
 var
   PointSCS1,
   fpcPoint1,
-  fpcPoint2:TPoint;
+  fpcPoint2           :TPoint;
   TopLeftPointWCS,
-  BottomRightPointWCS:TGTFPoint;
-  ARect:TRect;
-  W,H:Integer;
+  BottomRightPointWCS :TGTFPoint;
+  ARect               :TRect;
+  W,H                 :Integer;
 begin
+
+   if FDevelop then
+  begin
+    PointSCS1:=PointWCSToPointSCS(X0,Y0);
+    FDrawLayerMainCanvas.EllipseC(PointSCS1.X,PointSCS1.Y,2,2);
+  end;
+
    if FDrawFont then
-   begin
-   if (AWidth<=0)or(AHeight<=0) then
    begin
       W:=FDrawLayerMainCanvas.TextWidth(AText);
       H:=FDrawLayerMainCanvas.TextHeight(AText);
 
-      case AAlign of
-      gaAttachmentPointTopLeft:
+      if (AWidth<=0)or(AHeight<=0) then
       begin
-          PointSCS1:=PointWCSToPointSCS(X0,Y0);
+          AWidth  :=W;
+          AHeight :=H;
       end;
-      gaAttachmentPointTopCenter:
-      begin
-          PointSCS1:=PointWCSToPointSCS(X0,Y0);
-          PointSCS1.X:=PointSCS1.X-W div 2;
-      end;
-      gaAttachmentPointTopRight:
-      begin
-          PointSCS1:=PointWCSToPointSCS(X0,Y0);
-          PointSCS1.X:=PointSCS1.X-W;
-      end;
-      gaAttachmentPointMiddleLeft:
-      begin
-          PointSCS1:=PointWCSToPointSCS(X0,Y0);
-          PointSCS1.Y:=PointSCS1.Y-H div 2;
-      end;
-      gaAttachmentPointMiddleCenter:
-      begin
-          PointSCS1:=PointWCSToPointSCS(X0,Y0);
-          PointSCS1.X:=PointSCS1.X-W div 2;
-          PointSCS1.Y:=PointSCS1.Y-H div 2;
-      end;
-      gaAttachmentPointMiddleRight:
-      begin
-          PointSCS1:=PointWCSToPointSCS(X0,Y0);
-          PointSCS1.X:=PointSCS1.X-W;
-          PointSCS1.Y:=PointSCS1.Y-H div 2;
-      end;
-      gaAttachmentPointBottomLeft:
-      begin
-          PointSCS1:=PointWCSToPointSCS(X0,Y0);
-          PointSCS1.X:=PointSCS1.X;
-          PointSCS1.Y:=PointSCS1.Y-H;
-      end;
-      gaAttachmentPointBottomCenter:
-      begin
-          PointSCS1:=PointWCSToPointSCS(X0,Y0);
-          PointSCS1.X:=PointSCS1.X-W div 2;
-          PointSCS1.Y:=PointSCS1.Y-H;
-      end;
-      gaAttachmentPointBottomRight:
-      begin
-          PointSCS1:=PointWCSToPointSCS(X0,Y0);
-          PointSCS1.X:=PointSCS1.X-W;
-          PointSCS1.Y:=PointSCS1.Y-H;
-      end;
-      end;
-
-      FDrawLayerMainCanvas.Brush.Style:=bsClear;//Прозрачный текст
-      FDrawLayerMainCanvas.TextOut(PointSCS1.X,PointSCS1.Y,AText);
-   end
-   else begin
 
       case AAlign of
       gaAttachmentPointTopLeft:
@@ -5399,15 +5488,14 @@ begin
           TopLeftPointWCS.Y:=Y0;
           BottomRightPointWCS.X:=X0+AWidth;
           BottomRightPointWCS.Y:=Y0+AHeight;
-          PointSCS1:=PointWCSToPointSCS(X0,Y0);
       end;
       gaAttachmentPointTopCenter:
       begin
-          TopLeftPointWCS.X:=X0-Width div 2;
+          TopLeftPointWCS.X:=X0-(AWidth div 2);
           TopLeftPointWCS.Y:=Y0;
-          BottomRightPointWCS.X:=X0+AWidth div 2;
+          BottomRightPointWCS.X:=X0+(AWidth div 2);
           BottomRightPointWCS.Y:=Y0+AHeight;
-          PointSCS1:=PointWCSToPointSCS(X0-AWidth div 2,Y0);
+          X0:=X0-(AWidth div 2);
       end;
       gaAttachmentPointTopRight:
       begin
@@ -5415,31 +5503,33 @@ begin
           TopLeftPointWCS.Y:=Y0;
           BottomRightPointWCS.X:=X0;
           BottomRightPointWCS.Y:=Y0+AHeight;
-          PointSCS1:=PointWCSToPointSCS(X0-AWidth,Y0);
+          X0:=X0-AWidth;
       end;
       gaAttachmentPointMiddleLeft:
-      begin //
+      begin
           TopLeftPointWCS.X:=X0;
-          TopLeftPointWCS.Y:=Y0+AHeight div 2;
+          TopLeftPointWCS.Y:=Y0-(AHeight div 2);
           BottomRightPointWCS.X:=X0+AWidth;
-          BottomRightPointWCS.Y:=Y0-AHeight div 2;
-          PointSCS1:=PointWCSToPointSCS(X0,Y0-AHeight div 2);
+          BottomRightPointWCS.Y:=Y0+(AHeight div 2);
+          Y0:=Y0-(H div 2);
       end;
       gaAttachmentPointMiddleCenter:
       begin
-          TopLeftPointWCS.X:=X0-AWidth div 2;
-          TopLeftPointWCS.Y:=Y0-AHeight div 2;
-          BottomRightPointWCS.X:=X0+AWidth div 2;
-          BottomRightPointWCS.Y:=Y0+AHeight div 2;
-          PointSCS1:=PointWCSToPointSCS(X0-AWidth div 2,Y0-AHeight div 2);
+          TopLeftPointWCS.X:=X0-(AWidth div 2);
+          TopLeftPointWCS.Y:=Y0-(AHeight div 2);
+          BottomRightPointWCS.X:=X0+(AWidth div 2);
+          BottomRightPointWCS.Y:=Y0+(AHeight div 2);
+          X0:=X0-(AWidth div 2);
+          Y0:=Y0-(H div 2);
       end;
       gaAttachmentPointMiddleRight:
       begin
           TopLeftPointWCS.X:=X0-AWidth;
-          TopLeftPointWCS.Y:=Y0-AHeight div 2;
+          TopLeftPointWCS.Y:=Y0-(AHeight div 2);
           BottomRightPointWCS.X:=X0;
-          BottomRightPointWCS.Y:=Y0+AHeight div 2;
-          PointSCS1:=PointWCSToPointSCS(X0-AWidth,Y0-AHeight div 2);
+          BottomRightPointWCS.Y:=Y0+(AHeight div 2);
+          X0:=X0-AWidth;
+          Y0:=Y0-(H div 2);
       end;
       gaAttachmentPointBottomLeft:
       begin
@@ -5447,40 +5537,43 @@ begin
           TopLeftPointWCS.Y:=Y0-AHeight;
           BottomRightPointWCS.X:=X0+AWidth;
           BottomRightPointWCS.Y:=Y0;
-          PointSCS1:=PointWCSToPointSCS(X0,Y0-AHeight);
+          Y0:=Y0-H;
       end;
       gaAttachmentPointBottomCenter:
       begin
-          TopLeftPointWCS.X:=X0-AWidth div 2;
+          TopLeftPointWCS.X:=X0-(AWidth div 2);
           TopLeftPointWCS.Y:=Y0-AHeight;
-          BottomRightPointWCS.X:=X0+AWidth div 2;
+          BottomRightPointWCS.X:=X0+(AWidth div 2);
           BottomRightPointWCS.Y:=Y0;
-          PointSCS1:=PointWCSToPointSCS(X0-AWidth div 2,Y0-AHeight);
+          X0:=X0-(AWidth div 2);
+          Y0:=Y0-H;
       end;
       gaAttachmentPointBottomRight:
       begin
-          TopLeftPointWCS.X     :=X0-AWidth;
-          TopLeftPointWCS.Y     :=Y0-AHeight;
-          BottomRightPointWCS.X :=X0;
-          BottomRightPointWCS.Y :=Y0;
-          PointSCS1             :=PointWCSToPointSCS(X0-AWidth,Y0-AHeight);
+          TopLeftPointWCS.X:=X0-AWidth;
+          TopLeftPointWCS.Y:=Y0-AHeight;
+          BottomRightPointWCS.X:=X0;
+          BottomRightPointWCS.Y:=Y0;
+          X0:=X0-AWidth;
+          Y0:=Y0-H;
       end;
       end;
       fpcPoint1 :=PointWCSToPointSCS(TopLeftPointWCS.X,TopLeftPointWCS.Y);
       fpcPoint2 :=PointWCSToPointSCS(BottomRightPointWCS.X,BottomRightPointWCS.Y);
       ARect     :=Rect(fpcPoint1.x,fpcPoint1.y,fpcPoint2.x,fpcPoint2.y);
+      PointSCS1 :=PointWCSToPointSCS(X0,Y0);
 
       FDrawLayerMainCanvas.Brush.Style:=bsClear;//Прозрачный текст -ValWCSToValSCS(2.15)
       FDrawLayerMainCanvas.TextRect(ARect,PointSCS1.X,PointSCS1.Y,AText);
 
       if FDevelop then
       begin
-          FDrawLayerMainCanvas.Pen.Mode:=pmcopy;
-          FDrawLayerMainCanvas.Brush.Color:=clSilver;
+          FDrawLayerMainCanvas.Pen.Mode:=pmBlack;
+          FDrawLayerMainCanvas.Brush.Color:=clRed;
+          FDrawLayerMainCanvas.Brush.Style:=bsSolid;
           FDrawLayerMainCanvas.FrameRect(ARect);//прямоугольник  вокруг текста
       end;
 
-   end;
    end;//FDrawFont
 end;
 
@@ -5545,8 +5638,7 @@ begin
      begin
         if (((Item.BeginY<=APoint.Y)and(Item.EndY>=APoint.Y))and
             ((not Item.RowFiltered)or
-            ((Item.RowFiltered)and(not Item.RowParentFiltered))))
-            and(not Item.Separator) then
+            ((Item.RowFiltered)and(not Item.RowParentFiltered)))) then
         begin
               Result:=i;
               break;
@@ -5556,8 +5648,7 @@ begin
      begin
         if (((Item.BeginY<=APoint.Y)and(Item.EndY>=APoint.Y))and
             ((not Item.RowFiltered)or
-            ((Item.RowFiltered)and(not Item.RowParentFiltered))))
-            and(not Item.Separator) then
+            ((Item.RowFiltered)and(not Item.RowParentFiltered)))) then
         begin
               Result:=i;
               break;
@@ -5653,12 +5744,8 @@ begin
   FViewPos.Y                     :=10;
   FViewPos.Z                     :=10;
 
-  {
-  FViewBookmark.HBookmark        :=True;
-  FViewBookmark.VBookmark        :=False;
-  FViewBookmark.HBookmarkValue   :=DateUtils.IncDay(Now,-2);
-  FViewBookmark.VBookmarkValue   :=Null;
-  }
+  ColDateTimeBegin               :=now;
+  ColDateTimeEnd                 :=now;
 
   BookmarkToNow;
 
@@ -5687,6 +5774,39 @@ begin
     end;
   end;
   FViewBookmark.VBookmarkValue   :=Null;
+end;
+
+procedure TGTFDrawDocument.BookmarkUpdate;
+var
+  CurPos : TGTFPoint;
+  i      : integer;
+  ColItem:TGTFCOutsetTreeColItem;
+  RowItem:TGTFCOutsetTreeRowItem;
+begin
+  CurPos:=FDrawControl.PointSCSToPointWCS(FDrawControl.FLeftOutsetBorderWidth,FDrawControl.FTopOutsetBorderHeight);
+  i:=GetColUnderPoint(CurPos);
+  if i>-1 then
+  begin
+    ColItem:=TGTFCOutsetTreeColItem(Cols.Items[i]);
+    FViewBookmark.HBookmarkValue   :=ColItem.BeginDate;
+    FViewBookmark.HBookmark        :=True;
+  end
+  else begin
+     FViewBookmark.HBookmarkValue   :=Now;
+     FViewBookmark.HBookmark        :=False;
+  end;
+
+  i:=GetRowUnderPoint(CurPos);
+  if i>-1 then
+  begin
+    RowItem:=TGTFCOutsetTreeRowItem(Rows.Items[i]);
+    FViewBookmark.VBookmarkValue   :='TN:'+UpperCase(RowItem.DBTableName)+':ID:'+VarToStr(RowItem.DBRecordID);
+    FViewBookmark.VBookmark        :=True;
+  end
+  else begin
+     FViewBookmark.VBookmarkValue   :=Null;
+     FViewBookmark.VBookmark        :=False;
+  end;
 end;
 
 procedure TGTFDrawDocument.DeselectAll;
@@ -5734,6 +5854,18 @@ end;
 function TGTFDrawDocument.CreateConnectionline: TGraphicConnectionline;
 begin
   Result:=TGraphicConnectionline.Create;
+  Result.ID:=GetEntityID;
+end;
+
+function TGTFDrawDocument.CreateFrameLine: TGraphicFrameLine;
+begin
+  Result:=TGraphicFrameLine.Create;
+  Result.ID:=GetEntityID;
+end;
+
+function TGTFDrawDocument.CreateLandmark: TGraphicLandmark;
+begin
+  Result:=TGraphicLandmark.Create;
   Result.ID:=GetEntityID;
 end;
 

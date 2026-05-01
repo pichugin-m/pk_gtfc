@@ -4,7 +4,7 @@ unit u_gtfc_logicaldraw;
 //
 //    Модуль компонента Graphic Task Flow Control
 //    Copyright (c) 2013  Pichugin M.
-//    rev. 0.11
+//    rev. 0.12
 //    Разработчик: Pichugin M. (e-mail: pichugin-swd@mail.ru)
 //
 //************************************************************
@@ -30,6 +30,7 @@ type
 
   TSetStyleCustomDrawEvent = procedure(LineType:String; LineWidth:TgaLineWeight; Color:TgaColor) of object;
   TPointCustomDrawEvent = procedure(X, Y: Integer) of object;
+  TImageCustomDrawEvent = procedure(X, Y: Integer; AIndex:Smallint) of object;
   TLineCustomDrawEvent = procedure(X1, Y1, X2, Y2: Integer) of object;
   TRectangelCustomDrawEvent = procedure(TopLeftX, TopLeftY, BottomRightX, BottomRightY: Integer) of object;
   TCircleCustomDrawEvent = procedure(X, Y, Radius: Integer) of object;
@@ -64,6 +65,7 @@ type
     FOnEllipseDraw    : TEllipseCustomDrawEvent;
     FOnArcDraw        : TArcCustomDrawEvent;
     FOnTextDraw       : TTextCustomDrawEvent;
+    FOnImageDraw      : TImageCustomDrawEvent;
     FOnVertexDraw     : TVertexCustomDrawEvent;
     FOnGetTextWidth   : TGetTextWidthEvent;
     FOnGetTextHeight  : TGetTextHeightEvent;
@@ -86,6 +88,7 @@ type
     property OnArcDraw        : TArcCustomDrawEvent read FOnArcDraw write FOnArcDraw;
     property OnTextDraw       : TTextCustomDrawEvent read FOnTextDraw write FOnTextDraw;
     property OnVertexDraw     : TVertexCustomDrawEvent read FOnVertexDraw write FOnVertexDraw;
+    property OnImageDraw      : TImageCustomDrawEvent read FOnImageDraw write FOnImageDraw;
     property OnGetTextWidth   : TGetTextWidthEvent read FOnGetTextWidth write FOnGetTextWidth;
     property OnGetTextHeight  : TGetTextHeightEvent read FOnGetTextHeight write FOnGetTextHeight;
     property OnGetGridScale   : TGetIntegerValue read FOnGetGridScale write FOnGetGridScale;
@@ -99,6 +102,7 @@ type
     procedure PolylineDraw(AX1, AY1: Integer; APoints:Array of TPoint);
     procedure PolygonDraw(APoints:Array of TPoint);
     procedure PolygonDraw(AX1, AY1: Integer; APoints:Array of TPoint);
+    procedure ImageDraw(AX1, AY1: Integer; AIndex:SmallInt);
     procedure RectangelDraw(TopLeftX, TopLeftY, BottomRightX, BottomRightY: Integer);
     procedure FillDraw(TopLeftX, TopLeftY, BottomRightX, BottomRightY: Integer);
     procedure CircleDraw(X, Y, Radius: Integer);
@@ -203,6 +207,12 @@ begin
         end;
         FOnPolygonDraw(APoints);
     end;
+end;
+
+procedure TLogicalDraw.ImageDraw(AX1, AY1: Integer; AIndex: SmallInt);
+begin
+   if Assigned(FOnImageDraw) then
+      FOnImageDraw(AX1, AY1, AIndex);
 end;
 
 procedure TLogicalDraw.PointDraw(X, Y: Integer);

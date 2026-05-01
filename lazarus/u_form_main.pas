@@ -1383,6 +1383,7 @@ begin
 
     /////////LINE
     xLine:=TGraphicConnectionline.Create;
+    //xLine.ConnectLineStyle:=clsSpline;
     xLine.ID:=GTFControl.ActiveDocument.GetEntityID;
     xLine.BeginEntityID:=GTFControl.ActiveDocument.ModelSpace.Objects.Items[6].ID;
     xLine.EndEntityID:=GTFControl.ActiveDocument.ModelSpace.Objects.Items[14].ID;
@@ -1506,9 +1507,9 @@ end;
 
 procedure TFgassicMain.Button4Click(Sender: TObject);
 var
-  i1,i2,i3,Index:integer;
+  i1,i2,i3,i4,Index:integer;
 
-  Item1,Item2,Item3:TGTFCOutsetTreeRowItem;
+  Item1,Item2,Item3,item4:TGTFCOutsetTreeRowItem;
 begin
   Randomize;
 
@@ -1545,7 +1546,20 @@ begin
         //Item3.RowKey:=GTFControl.ActiveDocument.GetEntityID;
         Index:=GTFControl.ActiveDocument.Rows.Add(Item3);
         GenerateTask(Index,4,'Исполнитель');
+
+        if (i2=2)and(i1=2)and(i3=1) then
+      begin
+            item4:=TGTFCOutsetTreeRowItem.Create;
+            item4.Parent:=Item3;
+            item4.Text:='ЗаданиеZZ '+inttostr(i4);
+            item4.DBRecordID:='ID^'+item4.Text;
+            item4.SetExtendedData(['В работе',item4.Text,'2036']);
+            //item4.RowKey:=GTFControl.ActiveDocument.GetEntityID;
+            Index:=GTFControl.ActiveDocument.Rows.Add(item4);
+            GenerateTask(Index,4,'Исполнитель');
       end;
+      end;
+
     end;
   end;
 

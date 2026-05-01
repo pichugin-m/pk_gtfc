@@ -4,6 +4,18 @@
 //    License: LGPL
 //    Dev. Pichugin M. (e-mail: pichugin-swd@mail.ru)
 //
+// ver. 0.58
+// - add row filtering styles(HideAll, ChildOnly)
+// - add property LandmarkViewStyle for Landmark
+// - fix frame mode draw
+// - fix tasks draw
+// - fix FrameLine draw
+// - change text align
+// - change treerow text align algoritm
+// - change treerow text vert position algoritm
+// - new color in colorlist
+// - removed Separator row type
+//
 // ver. 0.57
 // - fix error with TListColumns class
 // - fix error with draw columns if visible=off

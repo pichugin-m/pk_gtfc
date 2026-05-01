@@ -2,7 +2,8 @@
 Component show chart gantt for Lazarus\CodeTyphon
 
 ## Version
-	
+  
+  - 0.58 (2026-05-01)<br>
   - 0.57 (2026-04-21)<br>
   - 0.56 (2026-04-19)<br>
   - 0.55 (2026-04-18)

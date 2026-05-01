@@ -1,10 +1,10 @@
 object FgassicMain: TFgassicMain
-  Left = 183
-  Height = 949
-  Top = 4
+  Left = 216
+  Height = 755
+  Top = 179
   Width = 1478
   Caption = 'GTFC - Graphic Task Flow Control'
-  ClientHeight = 949
+  ClientHeight = 755
   ClientWidth = 1478
   DesignTimePPI = 120
   LCLVersion = '4.6.0.0'
@@ -363,17 +363,17 @@ object FgassicMain: TFgassicMain
   end
   object pnlRight: TPanel
     Left = 1266
-    Height = 819
+    Height = 625
     Top = 130
     Width = 212
     Align = alRight
-    ClientHeight = 819
+    ClientHeight = 625
     ClientWidth = 212
     ParentFont = False
     TabOrder = 1
     object Memo1: TMemo
       Left = 1
-      Height = 817
+      Height = 623
       Top = 1
       Width = 210
       Align = alClient
@@ -383,7 +383,7 @@ object FgassicMain: TFgassicMain
   end
   object pnlBox: TPanel
     Left = 0
-    Height = 819
+    Height = 625
     Top = 130
     Width = 1266
     Align = alClient

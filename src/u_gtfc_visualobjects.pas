@@ -4,7 +4,7 @@ unit u_gtfc_visualobjects;
 //
 //    Модуль компонента Graphic Task Flow Control
 //    Copyright (c) 2013  Pichugin M.
-//    rev. 0.37
+//    rev. 0.40
 //    Разработчик: Pichugin M. (e-mail: pichugin-swd@mail.ru)
 //
 //************************************************************
@@ -17,7 +17,7 @@ uses
 {$ELSE}
   LCLIntf, LCLType,
 {$ENDIF}
-  Classes, SysUtils, ComCtrls, Controls, Graphics, DateUtils,
+  Classes, SysUtils, ComCtrls, Controls, Graphics, DateUtils, Forms,
   u_gtfc_objecttree,
   u_gtfc_logicaldraw, u_gtfc_const, u_gtfc_geometry;
 
@@ -34,12 +34,14 @@ type
 
   TEntityID = ShortString;
 
-  TBGTaskStyle = (bgtsStandard,bgtsCross,bgtsDiagonal);
+  TBGTaskStyle     = (bgtsStandard,bgtsCross,bgtsDiagonal);
+  TLandMarkStyle   = (lmsStandard,lmsRectangel,lmsTriangle,lmsRhombus,lmsDinDon,lmsImageList);
+  TConnectLineStyle   = (clsStandard,clsSpline);
 
-  TEntityState = set of (esNone,esCreating,esEditing,esMoving,esSelected);
+  TEntityState     = set of (esNone,esCreating,esEditing,esMoving,esSelected);
   TEntityDrawStyle = set of (edsNone,edsNormal,edsSelected,edsEditing,edsMoving,edsCreating);
-  TEntityType = (etNone,etAll,etBasicObject,etTask,etFrameLine,etConnectionLine,etLandmark);
-  TEntityTypes = set of TEntityType;
+  TEntityType      = (etNone,etAll,etBasicObject,etTask,etFrameLine,etConnectionLine,etLandmark);
+  TEntityTypes     = set of TEntityType;
 
   TGetDocumentEvent = function :TGTFDrawDocumentCustom of object;
 
@@ -50,6 +52,8 @@ type
   TGTFPoint = record
     X, Y, Z :Integer;
   end;
+
+  TArrayPoint = Array of TPoint;
 
   PTFloatRect = ^TFloatRect;
   TFloatRect = record
@@ -91,14 +95,18 @@ type
 
   TGTFDrawDocumentCustom = class
   private
+    FDateTimeBegin: TDateTime;
+    FDateTimeEnd: TDateTime;
     FModelSpace     :TWorkSpace;
     FRows           :TGTFCOutsetRowTree;
     FCols           :TGTFCOutsetColTree;
 
     function GetRowsAutoSort: Boolean;
+    procedure SetDateTimeBegin(AValue: TDateTime);
+    procedure SetDateTimeEnd(AValue: TDateTime);
     procedure SetRowsAutoSort(AValue: Boolean);
   protected
-    FGridLineWidth  :Integer;
+    FGridLineWidth        :Integer;
     FNodePaddingTopBottom :Integer;
     FNodePaddingLeftRight :Integer;
     FFontSize             : Integer;
@@ -117,6 +125,9 @@ type
 
     property  RowsAutoSort  :Boolean read GetRowsAutoSort
                                       write SetRowsAutoSort;
+
+    property ColDateTimeBegin :TDateTime read FDateTimeBegin write SetDateTimeBegin;
+    property ColDateTimeEnd   :TDateTime read FDateTimeEnd write SetDateTimeEnd;
 
     //Установить заголовок первого столбца строк
     procedure SetFirstColumn(AData: String);
@@ -399,9 +410,11 @@ type
      FBeginEntityIndex   : Integer;
      FEndEntityID        : TEntityID;
      FEndEntityIndex     : Integer;
+     FConnectLineStyle   : TConnectLineStyle;
      function GetBeginVertex: TGTFPoint;
      function GetEndVertex: TGTFPoint;
    public
+      property  ConnectLineStyle : TConnectLineStyle read FConnectLineStyle  write FConnectLineStyle;
       property  BeginEntityID    : TEntityID read FBeginEntityID write FBeginEntityID;
       property  BeginEntityIndex : Integer read FBeginEntityIndex  write FBeginEntityIndex;
       property  BeginVertex      : TGTFPoint read GetBeginVertex;
@@ -482,11 +495,13 @@ type
 
    TGraphicFrameLine   = class(TBasicGridEntity)
    private
+     FTriangleAuto     : Boolean;
      FTriangleBegin    : Boolean;
      FTriangleEnd      : Boolean;
    public
         property  TriangleBegin : Boolean read FTriangleBegin write FTriangleBegin;
         property  TriangleEnd   : Boolean read FTriangleEnd write FTriangleEnd;
+        property  TriangleAuto  : Boolean read FTriangleAuto write FTriangleAuto;
 
         procedure Repaint(Xshift,Yshift,AScaleX,AScaleY,AScaleZ:Integer; LogicalDrawing: TLogicalDraw; AStyle:TEntityDrawStyle); override;
         procedure RepaintVertex(LogicalDrawing: TLogicalDraw); override;
@@ -499,9 +514,16 @@ type
 
    TGraphicLandmark   = class(TBasicGridEntity)
    private
-       procedure SetTimeBegin(AValue: TDateTime); override;
-       procedure SetTimeEnd(AValue: TDateTime); override;
+     FImageListIndex: SmallInt;
+     FLandmarkViewStyle: TLandMarkStyle;
+     procedure SetImageListIndex(AValue: SmallInt);
+     procedure SetLandmarkViewStyle(AValue: TLandMarkStyle);
+     procedure SetTimeBegin(AValue: TDateTime); override;
+     procedure SetTimeEnd(AValue: TDateTime); override;
    public
+        property LandmarkViewStyle :TLandMarkStyle read FLandmarkViewStyle write SetLandmarkViewStyle;
+        property ImageListIndex :SmallInt read FImageListIndex write SetImageListIndex;
+
         procedure Repaint(Xshift,Yshift,AScaleX,AScaleY,AScaleZ:Integer; LogicalDrawing: TLogicalDraw; AStyle:TEntityDrawStyle); override;
         procedure RepaintVertex(LogicalDrawing: TLogicalDraw); override;
         function GetSelect(TopLeft, BottomRight: TGTFPoint; AllVertexInRect: Boolean):Integer; overload; override;
@@ -825,6 +847,18 @@ begin
    Result:=Rows.AutoSort;
 end;
 
+procedure TGTFDrawDocumentCustom.SetDateTimeBegin(AValue: TDateTime);
+begin
+  if FDateTimeBegin=AValue then Exit;
+  FDateTimeBegin:=AValue;
+end;
+
+procedure TGTFDrawDocumentCustom.SetDateTimeEnd(AValue: TDateTime);
+begin
+  if FDateTimeEnd=AValue then Exit;
+  FDateTimeEnd:=AValue;
+end;
+
 procedure TGTFDrawDocumentCustom.SetRowsAutoSort(AValue: Boolean);
 begin
    Rows.AutoSort:=AValue;
@@ -995,8 +1029,10 @@ var
   TmpVertex1: TGTFPoint;
   TmpVertex2: TGTFPoint;
   TmpVertex3: TGTFPoint;
+  iTextHeight2,
   TextSizeScale,
-  FTextWidth,FTextHeight :integer;
+  iMaxTextWidth,
+  iMaxTextHeight            :integer;
   Doc                    :TGTFDrawDocumentCustom;
   RowItem                :TGTFCOutsetTreeRowItem;
   iGridScale,
@@ -1035,10 +1071,10 @@ begin
            LogicalDrawing.SetStyleDraw(LINETYPE_SOLID,GetLineWeight(FLineWeight),GetColor(FColor));
       end;
 
-        TmpVertex0:=Vertex[0];
-        TmpVertex1:=Vertex[1];
-        TmpVertex2:=Vertex[2];
-        TmpVertex3:=Vertex[3];
+        TmpVertex0:=Vertex[0];  //TL
+        TmpVertex1:=Vertex[1];  //TR
+        TmpVertex2:=Vertex[2];  //BR
+        TmpVertex3:=Vertex[3];  //BL
 
         TmpVertex0.X:=GetBeginPoint.X+1;
         TmpVertex3.X:=TmpVertex0.X;
@@ -1053,11 +1089,11 @@ begin
           Abort;
         end;
 
-        RY1:=RowItem.EntityHeight*(AntiLayeringIndex-1);
-        RY2:=RowItem.EntityHeight;
+        RY1:=RowItem.EntityHeight*(AntiLayeringIndex-1); //мещение между задачами строки
+        RY2:=RowItem.EntityHeight;  //высота задачи
 
-        TmpVertex0.Y:=RowItem.BeginY+RY1+2;
-        TmpVertex3.Y:=TmpVertex0.Y+RY2-5;
+        TmpVertex0.Y:=RowItem.BeginY+RY1+2; // отступ от границы
+        TmpVertex3.Y:=TmpVertex0.Y+RY2-5; // отступ от границы
 
         TmpVertex1.Y:=TmpVertex0.Y;
         TmpVertex2.Y:=TmpVertex3.Y;
@@ -1096,83 +1132,47 @@ begin
 
       LogicalDrawing.SetFontStyleDraw(Doc.FFontName, Doc.FFontSize*TextSizeScale, []);
 
-      FTextWidth  :=ABS(TmpVertex1.X-TmpVertex0.X)-3;
-      FTextHeight :=ABS(TmpVertex3.Y-TmpVertex0.Y);
-      X1          :=TmpVertex0.X;
+      iTextHeight2   :=1;
+      LogicalDrawing.GetTextHeight(FText,iTextHeight2);
 
-        case iGridScale of
-            120:
+      iMaxTextWidth  :=ABS(TmpVertex1.X-TmpVertex0.X)-3;
+      iMaxTextHeight :=ABS(TmpVertex3.Y-TmpVertex0.Y);
+      X1             :=TmpVertex0.X;
+
+        if iGridScale>110 then
+        begin
+            if Length(FTextSecondLine)>0 then
             begin
-                  {
-                Y4          :=FTextHeight div 6;
-                Y1          :=TmpVertex0.Y+Y4*3;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
-                Y1          :=Y1+Y4*3;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
-                }
-                Y4          :=FTextHeight div 2;
-                Y1          :=TmpVertex0.Y+Y4-1;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
-                Y1          :=Y1+Y4-1;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
+                Y1          :=TmpVertex0.Y+(iMaxTextHeight div 2);
 
-            end;
-            130:
-            begin  {
-                Y4          :=FTextHeight div 6;
-                Y1          :=TmpVertex0.Y+Y4*3-2;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
-                Y1          :=Y1+Y4*3;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
-                }
-                 Y4          :=FTextHeight div 2;
-                Y1          :=TmpVertex0.Y+Y4-1;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
-                Y1          :=Y1+Y4-1;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
+                Y4          :=Y1 - (iTextHeight2 div 2);
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y4*AScaleY)+Yshift, iMaxTextWidth*AscaleX, iMaxTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
+                Y4          :=Y1 + (iTextHeight2 div 2);
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y4*AScaleY)+Yshift, iMaxTextWidth*AscaleX, iMaxTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
 
-            end;
-            140:
-            begin   {
-                Y4          :=FTextHeight div 6;
-                Y1          :=TmpVertex0.Y+Y4*3-4;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
-                Y1          :=Y1+Y4*3;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
-                }
-                Y4          :=FTextHeight div 2+1;
-                Y1          :=TmpVertex0.Y+Y4-1;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
-                Y1          :=Y1+Y4-1;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
-
-            end;
-            150:
-            begin  {
-                Y4          :=FTextHeight div 6;
-                Y1          :=TmpVertex0.Y+Y4*3;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
-                Y1          :=Y1+Y4*3;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
-                }
-                Y4          :=FTextHeight div 2+1;
-                Y1          :=TmpVertex0.Y+Y4-1;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
-                Y1          :=Y1+Y4-1;
-                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FTextSecondLine, gaAttachmentPointMiddleLeft);
-
-            end;
+            end
             else begin
-               Y1          :=TmpVertex0.Y+FTextHeight div 2;
+                Y1          :=TmpVertex0.Y+(iMaxTextHeight div 2);
 
-               //if iGridScale<100 then
-               //   Y1:=Y1-2;
+                LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+3,(Y1*AScaleY)+Yshift, iMaxTextWidth*AscaleX, iMaxTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
 
-               if Length(FTextSecondLine)>0 then
-                 LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText+' ● '+FTextSecondLine, gaAttachmentPointMiddleLeft)
-               else
-                 LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+5,(Y1*AScaleY)+Yshift{+5}, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
             end;
+        end
+        else
+        begin
+           Y1  :=TmpVertex0.Y+(iMaxTextHeight div 2);
+
+           if Length(FTextSecondLine)>0 then
+           begin
+             {$IFDEF MSWINDOWS}
+               LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+3,(Y1*AScaleY)+Yshift, iMaxTextWidth*AscaleX, iMaxTextHeight*AscaleY, 0, FText+' ● '+FTextSecondLine, gaAttachmentPointMiddleLeft);
+             {$ELSE}
+               LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+3,(Y1*AScaleY)+Yshift, iMaxTextWidth*AscaleX, iMaxTextHeight*AscaleY, 0, FText+' / '+FTextSecondLine, gaAttachmentPointMiddleLeft);
+             {$ENDIF}
+           end
+           else begin
+             LogicalDrawing.TextDraw((X1*AScaleX)+Xshift+3,(Y1*AScaleY)+Yshift, iMaxTextWidth*AscaleX, iMaxTextHeight*AscaleY, 0, FText, gaAttachmentPointMiddleLeft);
+           end;
         end;
 
         if edsMoving in AStyle then
@@ -1373,12 +1373,24 @@ var
   iQuadHeight,
   iLineHeight,
   X1,Y1,RY1,RY2          :Integer;
-  sText                        :String;
-  rGridScale                   :real;
+  sText                  :String;
+  rGridScale             :real;
+  bTriangleBegin,
+  bTriangleEnd           :Boolean;
 begin
   Doc:=GetDocument;
   if VertexCount=4 then
   begin
+        if FTriangleAuto then
+        begin
+            bTriangleBegin:=(CompareDate(Doc.ColDateTimeBegin, TimeBegin)<0);
+            bTriangleEnd:=(CompareDate(Doc.ColDateTimeEnd, TimeEnd)>0);
+        end
+        else begin
+            bTriangleBegin :=TriangleBegin;
+            bTriangleEnd   :=TriangleEnd;
+        end;
+
         iGridScale:=100;
         LogicalDrawing.GetGridScale(iGridScale);
 
@@ -1456,10 +1468,10 @@ begin
 
         LogicalDrawing.SetFontStyleDraw(Doc.FFontName, 12*TextSizeScale, []);
 
-        if FTriangleBegin then
+        if bTriangleBegin then
         LogicalDrawing.PolygonDraw(((TmpVertexBegin.X)*AScaleX)+Xshift,((TmpVertexBegin.Y+1)*AScaleY)+Yshift,[Point(0,0),Point(0,(iQuadHeight)*2),Point((iQuadHeight*2),0)]);
 
-        if FTriangleEnd then
+        if bTriangleEnd then
         LogicalDrawing.PolygonDraw(((TmpVertexEnd.X-1)*AScaleX)+Xshift,((TmpVertexEnd.Y+1)*AScaleY)+Yshift,[Point((iQuadHeight)*-2,0),Point(0,0),Point(0,(iQuadHeight*2))]);
         //LogicalDrawing.TextDraw(((TmpVertexBegin.X+3)*AScaleX)+Xshift,((TmpVertexBegin.Y-2)*AScaleY)+Yshift, 20*AscaleX, 20*AscaleY, 0, '▼', gaAttachmentPointTopCenter);
         //LogicalDrawing.TextDraw(((TmpVertexEnd.X+3)*AScaleX)+Xshift,((TmpVertexEnd.Y-2)*AScaleY)+Yshift, 20*AscaleX, 20*AscaleY, 0, '▼', gaAttachmentPointTopCenter);
@@ -1625,7 +1637,7 @@ end;
 constructor TGraphicFrameLine.Create;
 begin
   inherited Create;
-  FLineWeight       :=gaLnWtTriple; //gaLnWtDefault  gaLnWtDouble
+  FLineWeight       :=gaLnWtTriple;
   AddVertex(0,0,0);
   AddVertex(0,0,0);
   AddVertex(0,0,0);
@@ -1633,9 +1645,22 @@ begin
   FSortRangIndex    :=2;
   FTriangleBegin    :=True;
   FTriangleEnd      :=True;
+  FTriangleAuto     :=True;
 end;
 
 { TGraphicLandmark }
+
+procedure TGraphicLandmark.SetLandmarkViewStyle(AValue: TLandMarkStyle);
+begin
+  if FLandmarkViewStyle=AValue then Exit;
+  FLandmarkViewStyle:=AValue;
+end;
+
+procedure TGraphicLandmark.SetImageListIndex(AValue: SmallInt);
+begin
+  if FImageListIndex=AValue then Exit;
+  FImageListIndex:=AValue;
+end;
 
 procedure TGraphicLandmark.SetTimeBegin(AValue: TDateTime);
 begin
@@ -1670,8 +1695,7 @@ var
   RowItem                :TGTFCOutsetTreeRowItem;
   iGridScale,
   iHalfHeight,
-  iQuadHeight,
-  X1,Y1,RY2,RY1          :Integer;
+  X1,Y1,RY2              :Integer;
   sText                  :String;
 begin
   Doc:=GetDocument;
@@ -1700,10 +1724,10 @@ begin
           Abort;
         end;
 
-        RY1:=RowItem.EntityHeight*(AntiLayeringIndex-1);
+        //RY1:=RowItem.EntityHeight*(AntiLayeringIndex-1);
         RY2:=RowItem.EntityHeight;
         iHalfHeight:=RY2 div 2;
-        iQuadHeight:=RY2 div 4;
+        //iQuadHeight:=RY2 div 4;
 
         TmpVertex0:=Vertex[0];
         TmpVertex1:=Vertex[1];
@@ -1722,8 +1746,6 @@ begin
         TmpVertex1.Y  :=TmpVertex0.Y+RY2;
         TmpVertex2.Y  :=TmpVertex1.Y;
 
-        //TmpVertex0.Y:=RowItem.BeginY-1+RY2 div 2;
-
         Vertex[0]:=TmpVertex0;
         Vertex[1]:=TmpVertex1;
         Vertex[2]:=TmpVertex2;
@@ -1739,20 +1761,69 @@ begin
           TmpVertex3:=GetInteractiveVertex(TmpVertex3);
         end;
 
-        //Вариант 1
-        sText:='♦'; //Веха
-        LogicalDrawing.GetTextHeight(sText,FTextHeight);
-        LogicalDrawing.GetTextWidth(sText,FTextWidth);
-        LogicalDrawing.TextDraw(((TmpVertex0.X+(ABS(TmpVertex1.X-TmpVertex0.X)) div 2)*AScaleX)+Xshift,((TmpVertex0.Y+iHalfHeight)*AScaleY)+Yshift, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, sText, gaAttachmentPointMiddleCenter);
+        case FLandmarkViewStyle of
+            lmsDinDon:
+            begin
+              LogicalDrawing.SetFontStyleDraw(Doc.FFontName, 14*TextSizeScale, []);
+              {$IFDEF MSWINDOWS}
+                  sText:='♫'; //Веха
+              {$ELSE}
+                  sText:='♫'; //Веха
+              {$ENDIF}
+              LogicalDrawing.GetTextHeight(sText,FTextHeight);
+              LogicalDrawing.GetTextWidth(sText,FTextWidth);
+              LogicalDrawing.TextDraw(((TmpVertex0.X+(ABS(TmpVertex1.X-TmpVertex0.X)) div 2)*AScaleX)+Xshift,((TmpVertex0.Y+iHalfHeight)*AScaleY)+Yshift, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, sText, gaAttachmentPointMiddleCenter);
 
-        {
-        //Вариант 2
-        TmpVertexBegin   := TmpVertex0;
-        TmpVertexBegin.X := TmpVertex0.X+(ABS(TmpVertex1.X-TmpVertex0.X)) div 2;
-        TmpVertexBegin.Y := TmpVertex0.Y+iHalfHeight;
+            end;
+            lmsRectangel:
+            begin
+              TmpVertexBegin   := TmpVertex0;
+              TmpVertexBegin.X := TmpVertex0.X+(ABS(TmpVertex1.X-TmpVertex0.X)) div 2;
+              TmpVertexBegin.Y := TmpVertex0.Y+iHalfHeight;
 
-        LogicalDrawing.PolygonDraw(((TmpVertexBegin.X)*AScaleX)+Xshift,((TmpVertexBegin.Y)*AScaleY)+Yshift,[Point(0,((iHalfHeight-3)*-1)),Point(iQuadHeight,0),Point(0,iHalfHeight-3),Point(iQuadHeight*-1,0)]);
-        }
+              LogicalDrawing.PolygonDraw(((TmpVertexBegin.X)*AScaleX)+Xshift,((TmpVertexBegin.Y)*AScaleY)+Yshift,[Point(-10,10),Point(10,10),Point(10,-10),Point(-10,-10)]);
+            end;
+            lmsRhombus:
+            begin
+              TmpVertexBegin   := TmpVertex0;
+              TmpVertexBegin.X := TmpVertex0.X+(ABS(TmpVertex1.X-TmpVertex0.X)) div 2;
+              TmpVertexBegin.Y := TmpVertex0.Y+iHalfHeight;
+
+              LogicalDrawing.PolygonDraw(((TmpVertexBegin.X)*AScaleX)+Xshift,((TmpVertexBegin.Y)*AScaleY)+Yshift,[Point(0,10),Point(10,0),Point(0,-10),Point(-10,0)]);
+
+            end;
+            lmsTriangle:
+            begin
+              TmpVertexBegin   := TmpVertex0;
+              TmpVertexBegin.X := TmpVertex0.X+(ABS(TmpVertex1.X-TmpVertex0.X)) div 2;
+              TmpVertexBegin.Y := TmpVertex0.Y+iHalfHeight;
+
+              LogicalDrawing.PolygonDraw(((TmpVertexBegin.X)*AScaleX)+Xshift,((TmpVertexBegin.Y)*AScaleY)+Yshift,[Point(-10,-10),Point(10,-10),Point(0,10)]);
+
+            end;
+            lmsImageList:
+            begin
+              TmpVertexBegin   := TmpVertex0;
+              TmpVertexBegin.X := TmpVertex0.X+(ABS(TmpVertex1.X-TmpVertex0.X)) div 2;
+              TmpVertexBegin.Y := TmpVertex0.Y+iHalfHeight;
+
+              LogicalDrawing.ImageDraw(((TmpVertexBegin.X)*AScaleX)+Xshift,((TmpVertexBegin.Y)*AScaleY)+Yshift,ImageListIndex);
+
+            end;
+            else begin
+              LogicalDrawing.SetFontStyleDraw(Doc.FFontName, 22*TextSizeScale, []);
+              //lmsStandard
+              {$IFDEF MSWINDOWS}
+                  sText:='♦'; //Веха
+              {$ELSE}
+                  sText:='♦'; //Веха
+              {$ENDIF}
+              LogicalDrawing.GetTextHeight(sText,FTextHeight);
+              LogicalDrawing.GetTextWidth(sText,FTextWidth);
+              LogicalDrawing.TextDraw(((TmpVertex0.X+(ABS(TmpVertex1.X-TmpVertex0.X)) div 2)*AScaleX)+Xshift,((TmpVertex0.Y+iHalfHeight)*AScaleY)+Yshift, FTextWidth*AscaleX, FTextHeight*AscaleY, 0, sText, gaAttachmentPointMiddleCenter);
+
+            end;
+        end;
 
         //Текст
         LogicalDrawing.SetStyleDraw(LINETYPE_SOLID,GetLineWeight(gaLnWtDefault),GetColor(gaDefault)); //
@@ -1921,6 +1992,12 @@ begin
   AddVertex(0,0,0);
   AddVertex(0,0,0);
   FSortRangIndex    :=1;
+  {$IFDEF WINDOWS}
+     FLandmarkViewStyle:=lmsStandard;
+  {$ELSE}
+     FLandmarkViewStyle:=lmsRhombus;
+  {$ENDIF}
+  FImageListIndex:=-1;
 end;
 
 { TWorkSpaceCustom }
@@ -2011,16 +2088,16 @@ begin
    end;
    if c>0 then
    begin
-   for i:=0 to Objects.Count-1 do
-   begin
-      if Objects.Items[i].GroupOwner=AOwnerGroup then
-      begin
-         NewVertex.X:=Objects.Items[i].VertexAxleX[0]+dX;
-         NewVertex.Y:=Objects.Items[i].VertexAxleY[0]+dY;
-         NewVertex.Z:=Objects.Items[i].VertexAxleZ[0]+dZ;
-         Objects.Items[i].MoveVertex(0,NewVertex);
-      end;
-   end;
+     for i:=0 to Objects.Count-1 do
+     begin
+        if Objects.Items[i].GroupOwner=AOwnerGroup then
+        begin
+           NewVertex.X:=Objects.Items[i].VertexAxleX[0]+dX;
+           NewVertex.Y:=Objects.Items[i].VertexAxleY[0]+dY;
+           NewVertex.Z:=Objects.Items[i].VertexAxleZ[0]+dZ;
+           Objects.Items[i].MoveVertex(0,NewVertex);
+        end;
+     end;
    end;
 end;
 
@@ -2124,7 +2201,7 @@ end;
 procedure TEntityBasic.Created;
 begin
   if ID='' then
-     raise Exception.Create('Не задан ID')
+     raise Exception.Create('Not setted ID object')
   else
      FState:=[esNone];
 end;
@@ -2293,7 +2370,6 @@ end;
 procedure TEntity.SetColor(AValue: TgaColor);
 begin
   if FColor=AValue then Exit;
-  //AValue:=(AValue-gaMaxColors*(AValue div gaMaxColors));
   FColor:=AValue;
 end;
 
@@ -2488,10 +2564,8 @@ begin
   begin
       tmpVertex :=ItemA.Vertex[1];
 
-      //Result.Y  :=tmpVertex.Y+((ItemA.Vertex[2].Y-tmpVertex.Y)div 2); //середина
-      x           :=((ItemA.Vertex[2].Y-tmpVertex.Y)div 6);
-      Result.Y  :=tmpVertex.Y+x*2;
-      Result.X  :=tmpVertex.X-x*2;
+      Result.Y  :=tmpVertex.Y+((ItemA.Vertex[2].Y-tmpVertex.Y)div 2); //середина
+      Result.X  :=tmpVertex.X;
       Result.Z  :=0;
 
       if esMoving in ItemA.State then
@@ -2520,10 +2594,8 @@ begin
   begin
 
       tmpVertex :=ItemA.Vertex[0];
-      //Result.Y  :=tmpVertex.Y+((ItemA.Vertex[3].Y-tmpVertex.Y)div 2); //середина
-      x         :=((ItemA.Vertex[3].Y-tmpVertex.Y)div 6);
-      Result.Y  :=ItemA.Vertex[3].Y-x*2;
-      Result.X  :=tmpVertex.X+x*2;
+      Result.Y  :=tmpVertex.Y+((ItemA.Vertex[3].Y-tmpVertex.Y)div 2); //середина
+      Result.X  :=tmpVertex.X;
       Result.Z  :=0;
 
       if esMoving in ItemA.State then
@@ -2558,20 +2630,27 @@ begin
     if edsSelected in AStyle then
        LogicalDrawing.SetStyleDraw(LINETYPE_SELECTED,GetLineWeight(gaLnWtDefault),GetColor(FColor))
     else
-       LogicalDrawing.SetStyleDraw(LINETYPE_SOLID,GetLineWeight(gaLnWtDefault),GetColor(FColor));
+       LogicalDrawing.SetStyleDraw(LINETYPE_SOLID,GetLineWeight(gaLnWtDouble),GetColor(FColor));
 
     GetLinePointsVertex(Points);
     if Length(Points)>1 then
     begin
-      {
-      fpoint:=Points[0];
-      for i:=0 to high(Points) do
-      begin
-          LogicalDrawing.LineDraw((fpoint.X*AScaleX)+Xshift,(fpoint.Y*AScaleY)+Yshift,(Points[i].X*AScaleX)+Xshift,(Points[i].Y*AScaleY)+Yshift);
-          fpoint:=Points[i];
+
+      case FConnectLineStyle of
+          clsSpline:
+          begin
+             LogicalDrawing.LineSDraw(Points[0].X,Points[0].Y,Points[1].X,Points[1].Y,Points[2].X,Points[2].Y,Points[3].X,Points[3].Y);
+          end;
+          else //clsStandard
+          begin
+              fpoint:=Points[0];
+              for i:=0 to high(Points) do
+              begin
+                  LogicalDrawing.LineDraw((fpoint.X*AScaleX)+Xshift,(fpoint.Y*AScaleY)+Yshift,(Points[i].X*AScaleX)+Xshift,(Points[i].Y*AScaleY)+Yshift);
+                  fpoint:=Points[i];
+              end;
+          end;
       end;
-      }
-      LogicalDrawing.LineSDraw(Points[0].X,Points[0].Y,Points[1].X,Points[1].Y,Points[2].X,Points[2].Y,Points[3].X,Points[3].Y);
 
       LogicalDrawing.SetStyleDraw(LINETYPE_SOLID,GetLineWeight(gaLnWtTriple),GetColor(FColor));
 
@@ -2634,14 +2713,6 @@ begin
       if PointIn2DRect(Points[i],TopLeft, BottomRight) then
       begin
         CountVertexInRect:=CountVertexInRect+1;
-        {
-        if not((i=0)or(i=c)) then
-        begin
-          MVertx.Item:=self;
-          MVertx.VertexIndex:=-1;
-          MVertx.VertexPos:=Points[i];
-        end;
-        }
       end;
   end;
 
@@ -2706,145 +2777,76 @@ end;
 
 procedure TGraphicConnectionline.GetLinePointsVertex(var APoints: TPointsArray);
 var
-  iStyle,
-  i,c,n    :integer;
+  iHeight  :integer;
   spoint,
   fpoint   :TGTFPoint;
 begin
- iStyle:=3;
+ iHeight:=12;
 
- {
-  0- прямая линия
-  1- горизонтальная
-  2- вертикальная
-  3- автовыбор горизонтальной и вертикальной
- }
+ fpoint:=GetBeginVertex;
+ spoint:=GetEndVertex;
 
- if iStyle=3 then
- begin
-    fpoint:=GetBeginVertex;
-    spoint:=GetEndVertex;
-
-    if abs(spoint.X-fpoint.X)>abs(spoint.Y-fpoint.Y) then
-    begin
-       iStyle:=1;
-    end
-    else begin
-       iStyle:=2;
-    end;
- end;
-
- if iStyle=0 then
- begin
-    c:=Length(APoints);
-    n:=c+1;
-    SetLength(APoints,n);
-    APoints[c]:=GetBeginVertex;
-
-
-    for i:=0 to VertexCount-1 do
-    begin
-        c:=Length(APoints);
-        n:=c+1;
-        SetLength(APoints,n);
-        APoints[c]:=Vertex[i];
-    end;
-
-    c:=Length(APoints);
-    n:=c+1;
-    SetLength(APoints,n);
-    APoints[c]:=GetEndVertex;
-
- end
- else if iStyle=1 then  //горизонтально
- begin
-
-   c:=Length(APoints);
-   n:=c+1;
-   SetLength(APoints,n);
-   APoints[c]:=GetBeginVertex;
-   fpoint:=APoints[c];
-
-   for i:=0 to VertexCount-1 do
-   begin
-       c:=Length(APoints);
-       n:=c+1;
-       SetLength(APoints,n);
-       APoints[c]:=Vertex[i];
-       fpoint:=APoints[c];
-   end;
-
-   spoint:=GetEndVertex;
-
-   if ((fpoint.X<>spoint.X)And(fpoint.Y<>spoint.Y)) then
-   begin
-       c:=Length(APoints);
-       n:=c+1;
-       SetLength(APoints,n);
-       APoints[c].X:=fpoint.X+((spoint.X-fpoint.X) div 2);
-       APoints[c].Y:=fpoint.Y;
-       APoints[c].Z:=0;
-
-       c:=Length(APoints);
-       n:=c+1;
-       SetLength(APoints,n);
-       APoints[c].X:=fpoint.X+((spoint.X-fpoint.X) div 2);
-       APoints[c].Y:=spoint.Y;
-       APoints[c].Z:=0;
-   end;
-
-   c:=Length(APoints);
-   n:=c+1;
-   SetLength(APoints,n);
-   APoints[c]:=spoint;
- end
- else if iStyle=2 then  //вертикально
- begin
-
-   c:=Length(APoints);
-   n:=c+1;
-   SetLength(APoints,n);
-   APoints[c]:=GetBeginVertex;
-   fpoint:=APoints[c];
-
-   for i:=0 to VertexCount-1 do
-   begin
-       c:=Length(APoints);
-       n:=c+1;
-       SetLength(APoints,n);
-       APoints[c]:=Vertex[i];
-       fpoint:=APoints[c];
-   end;
-
-   spoint:=GetEndVertex;
-
-   if ((fpoint.X<>spoint.X)And(fpoint.Y<>spoint.Y)) then
-   begin
-             c:=Length(APoints);
-             n:=c+1;
-             SetLength(APoints,n);
-             APoints[c].X:=fpoint.X;
-             APoints[c].Y:=fpoint.Y+((spoint.y-fpoint.y) div 2);
-             APoints[c].Z:=0;
-
-             c:=Length(APoints);
-             n:=c+1;
-             SetLength(APoints,n);
-             APoints[c].X:=spoint.X;
-             APoints[c].Y:=fpoint.Y+((spoint.y-fpoint.y) div 2);
-             APoints[c].Z:=0;
-   end;
-
-   c:=Length(APoints);
-   n:=c+1;
-   SetLength(APoints,n);
-   APoints[c]:=spoint;
- end;
+  if fpoint.X<=spoint.X then
+  begin
+      if fpoint.Y<=spoint.Y then
+      begin
+        SetLength(APoints,4);
+        APoints[0]:=fpoint;
+        APoints[1].X:=APoints[0].X+(iHeight div 2);
+        APoints[1].Y:=APoints[0].Y;
+        APoints[2].X:=APoints[1].X;
+        APoints[2].Y:=spoint.Y;
+        APoints[3]:=Spoint;
+      end
+      else if fpoint.Y>spoint.Y then
+      begin
+        SetLength(APoints,4);
+        APoints[0]:=fpoint;
+        APoints[1].X:=APoints[0].X+(iHeight div 2);
+        APoints[1].Y:=APoints[0].Y;
+        APoints[2].X:=APoints[1].X;
+        APoints[2].Y:=spoint.Y;
+        APoints[3]:=Spoint;
+      end;
+  end
+  else if fpoint.X>spoint.X then
+  begin
+      if fpoint.Y<=spoint.Y then
+      begin
+        SetLength(APoints,6);
+        APoints[0]:=fpoint;
+        APoints[1].X:=APoints[0].X+(iHeight div 2);
+        APoints[1].Y:=APoints[0].Y;
+        APoints[2].X:=APoints[1].X;
+        APoints[2].Y:=APoints[1].Y+iHeight;
+        APoints[3].X:=spoint.X-iHeight;
+        APoints[3].Y:=APoints[2].Y;
+        APoints[4].X:=APoints[3].X;
+        APoints[4].Y:=spoint.Y;
+        APoints[5]:=Spoint;
+      end
+      else if fpoint.Y>spoint.Y then
+      begin
+        SetLength(APoints,6);
+        APoints[0]:=fpoint;
+        APoints[1].X:=APoints[0].X+(iHeight div 2);
+        APoints[1].Y:=APoints[0].Y;
+        APoints[2].X:=APoints[1].X;
+        APoints[2].Y:=APoints[1].Y-iHeight;
+        APoints[3].X:=spoint.X-iHeight;
+        APoints[3].Y:=APoints[2].Y;
+        APoints[4].X:=APoints[3].X;
+        APoints[4].Y:=spoint.Y;
+        APoints[5]:=Spoint;
+      end;
+  end;
 end;
 
 constructor TGraphicConnectionline.Create;
 begin
   inherited Create;
+  FConnectLineStyle:=clsStandard;
+  FColor:=26;
 end;
 
 { TEntityList }
@@ -3296,7 +3298,7 @@ begin
   Align         :=AAlign;
   FontSize      :=9;
   FontStyle     :=[];
-  FontName      :='Arial';
+  FontName      :=Screen.SystemFont.Name;
   Width         :=0;
   Height        :=0;
   Rotate        :=ARotate;
@@ -3311,7 +3313,7 @@ begin
   Align         :=AAlign;
   FontSize      :=3;
   FontStyle     :=[];
-  FontName      :='Arial';
+  FontName      :=Screen.SystemFont.Name;
   Width         :=AWidth;
   Height        :=AHeight;
   Rotate        :=ARotate;

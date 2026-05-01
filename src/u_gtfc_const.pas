@@ -22,16 +22,16 @@ const
   gaNonRGBMaxColors = 30;
 
   gaDefault   = 0;
-  gaRed       = 15;
-  gaYellow    = 18;
-  gaGreen     = 16;
-  gaBlue      = 17;
+  gaRed       = 24;
+  gaYellow    = 42;
+  gaGreen     = 38;
+  gaBlue      = 34;
   gaGray      = 10;
   gaGray2     = 11;
   gaWhite     = 14;
   gaBlack     = 9;
 
-  gaInactive  = 32;
+  gaInactive  = 10;
 
   gaHighLight   = 3;
   gaHighLightText = 4;

@@ -6,7 +6,7 @@ unit u_gtfc_objecttree;
 //
 //    Модуль компонента Graphic Task Flow Control
 //    Copyright (c) 2013  Pichugin M.
-//    rev. 16
+//    rev. 17
 //    Разработчик: Pichugin M. (e-mail: pichugin-swd@mail.ru)
 //
 //************************************************************
@@ -29,6 +29,8 @@ type
   { Data types }
 
   TGTFCOutsetTreeClickResult = (tcrNone,tcrBody,tcrButton);
+  TRowFilterStyle            = (rfsHideAll,rfsOnlyChild);
+
   //todo
   //TGTFCOutsetTreeState = set of (ttsNone,ttsCreating,ttsEditing,ttsMoving,ttsSelected);
   //TGTFCOutsetTreeDrawStyle = set of (tdsNone,tdsNormal,tdsSelected,tdsEditing,tdsMoving,tdsCreating);
@@ -109,7 +111,6 @@ type
     FDBRecordID    : Variant;
     FDBTableNameIndex : integer;
     FGridIndex     : Integer;
-    FSeparator     : Boolean;
     FParentItem    : Boolean;
     FChildCount    : Integer;
     FColor         : Integer;
@@ -135,8 +136,6 @@ type
     property ChildCount : integer read FChildCount write FChildCount;
     property Color : integer read FColor write SetColor;
     property Parent : TGTFCOutsetTreeBasicItem read GetParent write SetParent;
-    //Объект-заглушка для выравнивания строк
-    property Separator  : Boolean read FSeparator write FSeparator;
     property ParentItem : Boolean read FParentItem;
     procedure SetParentItemTrue;
     procedure SetParentItemFalse;
@@ -159,6 +158,8 @@ type
     FEndY                : integer;
     FExtColData          : TStringArray;
     FDrawRectButton      : TRect;
+    FRowFilterStyle      : TRowFilterStyle;
+    function GetRowDataHide: boolean;
     function GetRowEnabled: Boolean;
     function GetRowFiltered: Boolean;
     function GetRowParentFiltered: Boolean;
@@ -168,12 +169,14 @@ type
     //Визуальное выделение строки как неактивной
     property RowEnabled  : Boolean read GetRowEnabled write SetRowEnabled;
     property RowFiltered : Boolean read GetRowFiltered write SetRowFiltered;
+    property RowFilterStyle : TRowFilterStyle read FRowFilterStyle write FRowFilterStyle;
     property RowParentFiltered : Boolean read GetRowParentFiltered;
     property BeginY : integer read FBeginY write FBeginY;
     property EndY   : integer read FEndY write FEndY;
     property Height : integer read FHeight write FHeight;
     property EntityHeight :integer read FEntityHeight write FEntityHeight;
     property LayerCount :integer read FLayerCount write FLayerCount;
+    property RowDataHide: boolean read GetRowDataHide;
     procedure SetExtendedData(AData:TStringArray);
     function GetExtendedData:TStringArray;
     procedure SetDrawRectButton(TopLeft, BottomRight: TPoint);
@@ -216,8 +219,6 @@ type
     function GetUpdateStatus: Boolean;
     function GetLevelCount(AUpLevel: Integer; AParent: TGTFCOutsetTreeBasicItem
       ): integer;
-    function InitSeparatorLevel(AList: TGTFCOutsetBasicTree;
-      AMaxLevel: Integer; AParent: TGTFCOutsetTreeBasicItem): boolean;
     procedure UpdateLevelCount;
   protected
     function GetItem(Index: Integer): TGTFCOutsetTreeBasicItem;
@@ -553,7 +554,6 @@ begin
   if FUpdateCount =0 then
   begin
     UpdateLevelCount;
-    InitSeparatorLevel(Self, FLevelCount, nil);
     if FAutoSort then
     TreeRecordSort(Self);
     UpdateLevelCount;
@@ -584,6 +584,12 @@ begin
   else begin
     Result:=FRowEnabled;
   end;
+end;
+
+function TGTFCOutsetTreeRowItem.GetRowDataHide: boolean;
+begin
+  Result:=((RowFiltered)and(RowParentFiltered))or
+      ((RowFiltered)and(RowFilterStyle=rfsHideAll));
 end;
 
 function TGTFCOutsetTreeRowItem.GetRowFiltered: Boolean;
@@ -667,7 +673,7 @@ begin
   SetLength(FExtColData,0);
   FRowEnabled   :=True;
   FRowFiltered  :=False;
-
+  FRowFilterStyle :=rfsHideAll;
   FDrawRectButton:=Rect(0,0,0,0);
 end;
 
@@ -833,52 +839,11 @@ begin
   if FUpdateCount =0 then
   begin
     UpdateLevelCount;
-    InitSeparatorLevel(Self, FLevelCount, nil);
-    UpdateLevelCount;
   end;
 
   if FUpdateCount<0 then
   begin
     FUpdateCount := 0;
-  end;
-end;
-
-//Выравнивание кол-ва элементов в строках
-function TGTFCOutsetBasicTree.InitSeparatorLevel(AList:TGTFCOutsetBasicTree; AMaxLevel:Integer; AParent:TGTFCOutsetTreeBasicItem):boolean;
-var
-  iCount,
-  i:integer;
-  LastItem,
-  NewItem :TGTFCOutsetTreeBasicItem;
-begin
-  Result:=False;
-  iCount:=0;
-  for i:=AList.count-1 downto 0  do
-  begin
-    if AList.Items[i].Parent=AParent then
-    begin
-       Result:=InitSeparatorLevel(AList, AMaxLevel, AList.Items[i]);
-       inc(iCount);
-    end;
-  end;
-  if Assigned(AParent)and(iCount=0)and(AParent.Level<AMaxLevel-1) then
-  begin
-     //Последний элемент
-     LastItem:=AParent.Parent;
-     for i:=AParent.Level to AMaxLevel-2 do
-     begin
-            NewItem        :=TGTFCOutsetTreeRowItem.Create;
-            NewItem.Parent :=LastItem;
-            NewItem.Level  :=0;//i;
-            NewItem.Data   :=nil;
-            NewItem.Text   :='-';
-            NewItem.Separator  :=True;
-            AList.Add(NewItem);
-            LastItem       :=NewItem;
-            Result         :=True;
-     end;
-     AParent.Parent :=LastItem;
-     AParent.Level  :=0;
   end;
 end;
 
@@ -983,7 +948,7 @@ begin
   FTag:=0;
   FLevel:=0;
   FText:='';
-  FSeparator :=False;
+
   FParentItem:=False;
   FGridIndex :=0;
 
