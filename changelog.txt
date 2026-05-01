@@ -7,9 +7,9 @@
 // ver. 0.58
 // - add row filtering styles(HideAll, ChildOnly)
 // - add property LandmarkViewStyle for Landmark
-// - fix frame mode draw
-// - fix tasks draw
-// - fix FrameLine draw
+// - fix frame mode rendering errors
+// - fix tasks rendering errors
+// - fix FrameLine rendering errors
 // - change text align
 // - change treerow text align algoritm
 // - change treerow text vert position algoritm
